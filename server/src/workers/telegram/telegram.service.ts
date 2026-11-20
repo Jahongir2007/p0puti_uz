@@ -34,6 +34,10 @@ export class TelegramWorker implements OnModuleInit {
                         case 'AD_IN_PAST':
                             await this.telegramBot.sendAdInPastMessage(job.data.telegramId, job.data);
                             break;
+                        
+                        case 'USER_CREATED':
+                            await this.telegramBot.sendWelcomeMessage(job.data.telegramId);
+                            break;
                         default: {
                             const _exhaustive: never = job;   // compile error if you add an event type and forget a case
                             console.warn('Unknown telegram event:', _exhaustive);

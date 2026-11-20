@@ -1,8 +1,9 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { db } from '../prisma/db.js';
 import { Varchar } from '@prisma/orm-postgres/target/codec-types';
-import { ClientProxy } from '@nestjs/microservices';
 import { JwtService } from '@nestjs/jwt';
+import { RabbitMQService } from '../infrastructure/rabbitmq/rabbitmq.service.js';
+import { TelegramEventJob } from '../infrastructure/telegram/telegramEvent.interface.js';
 
 interface TelegramUserData {
     id: number,
@@ -16,9 +17,7 @@ interface TelegramUserData {
 export class UserService {
     
     constructor(
-        @Inject('USER_EVENTS')
-        private readonly userEvents: ClientProxy,
-
+        private readonly rabbitMQ: RabbitMQService,
         private readonly jwtService: JwtService,
     ) {}
 
@@ -38,10 +37,10 @@ export class UserService {
 
             console.log('📤 Emitting user.created');
 
-            this.userEvents.emit('user.created', {
-                userId: user.id,
-                telegramId: telegramUser.id.toString(),
-            });
+            this.rabbitMQ.publish('telegram_events', {
+                type: 'USER_CREATED',
+                data: { telegramId: telegramUser.id.toString() }
+            } satisfies TelegramEventJob);
         }
 
         console.log("Signing JWT token");

@@ -1,9 +1,7 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
-import { Transport } from '@nestjs/microservices';
 import { AppModule, ObserveInstrument } from './app.module.js';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
-import { TypeToPatternDeserializer } from './infrastructure/rabbitmq/deserializer/typeToPattern.deserializer.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -15,17 +13,6 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix("api");
-  app.connectMicroservice({
-    transport: Transport.RMQ,
-    options: {
-      urls: ['amqp://localhost:5672'],
-      queue: 'telegram_events',
-      queueOptions: {
-        durable: true,
-      },
-      deserializer: new TypeToPatternDeserializer(),
-    },
-  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -40,8 +27,6 @@ async function bootstrap() {
       },
     }),
   );
-
-  await app.startAllMicroservices();
 
   console.log("1️⃣ Before listen");
 

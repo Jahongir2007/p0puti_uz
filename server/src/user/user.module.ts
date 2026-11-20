@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { UserController } from './user.controller.js';
 import { UserService } from './user.service.js';
 import { ConfigService } from '@nestjs/config';
+import { RabbitMQModule } from '../infrastructure/rabbitmq/rabbitmq.module.js';
 
 @Module({
   imports: [
@@ -13,19 +14,7 @@ import { ConfigService } from '@nestjs/config';
         secret: configService.getOrThrow<string>('JWT_SECRET'),
       }),
     }),
-    ClientsModule.register([
-      {
-        name: 'USER_EVENTS',
-        transport: Transport.RMQ,
-        options: {
-          urls: ['amqp://localhost:5672'],
-          queue: 'telegram_events',
-          queueOptions: {
-            durable: true,
-          },
-        },
-      },
-    ]),
+    RabbitMQModule
   ],
   controllers: [UserController],
   providers: [UserService],

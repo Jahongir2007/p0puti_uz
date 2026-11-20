@@ -32,9 +32,6 @@ export class TelegramBot implements OnModuleInit {
     this.bot = new Bot(token);
 
     this.miniAppUrl = miniAppUrl;
-    this.bot = new Bot(token);
-    this.registerHandlers(miniAppUrl);
-
     this.registerHandlers(miniAppUrl);
   }
 
@@ -139,12 +136,17 @@ Olg'a! 🚀`,
   onModuleInit(): void {
     this.bot.start({
         onStart: (botInfo) => {
-        console.log(
-            `🤖 Telegram bot started as @${botInfo.username}`,
-        );
+          console.log(
+              `🤖 Telegram bot started as @${botInfo.username}`,
+          );
         },
     }).catch((error) => {
         console.error("❌ Telegram bot failed:", error);
+        process.exit(1);
     });
+  }
+
+  async onModuleDestroy() {
+    await this.bot.stop();
   }
 }

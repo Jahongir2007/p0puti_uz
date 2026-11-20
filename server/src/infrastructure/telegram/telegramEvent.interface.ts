@@ -15,3 +15,7 @@ export type TelegramEventJob =
         type: 'AD_IN_PAST',
         data: { telegramId: string, from: string, to: string, date: string, time: string }
     }
+    | {
+        type: 'USER_CREATED',
+        data: { telegramId: string }
+    }
