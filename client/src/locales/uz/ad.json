@@ -1,0 +1,49 @@
+{
+  "header": {
+    "label": "E’lon",
+    "title": "Safar tafsilotlari",
+    "back": "Orqaga"
+  },
+  "state": {
+    "notSelected": "E’lon tanlanmagan",
+    "error": "E’lon yuklanmadi",
+    "retry": "Qayta urinish",
+    "notFound": "E’lon topilmadi"
+  },
+  "type": {
+    "DRIVER": "Haydovchi e’loni",
+    "PASSENGER": "Yo‘lovchi e’loni"
+  },
+  "route": {
+    "from": "Qayerdan",
+    "to": "Qayerga"
+  },
+  "info": {
+    "title": "Ma’lumotlar",
+    "date": "Sana",
+    "departure": "Jo‘nash vaqti",
+    "freeSeats": "Bo‘sh joylar",
+    "neededSeats": "Kerakli joylar",
+    "price": "Narx",
+    "negotiable": "Kelishiladi",
+    "luggage": "Yuk",
+    "luggageYes": "Mumkin",
+    "luggageNo": "Mumkin emas",
+    "arrival": "Yetib borish",
+    "notSpecified": "Ko‘rsatilmagan"
+  },
+  "seats_one": "{{count}} ta joy",
+  "seats_other": "{{count}} ta joy",
+  "price": "{{value}} so‘m",
+  "person": {
+    "driver": "Haydovchi",
+    "passenger": "Yo‘lovchi",
+    "fallbackName": "Foydalanuvchi"
+  },
+  "description": "Izoh",
+  "related": "O‘xshash e’lonlar",
+  "contact": {
+    "call": "Qo‘ng‘iroq qilish",
+    "telegram": "Telegramda yozish"
+  }
+}

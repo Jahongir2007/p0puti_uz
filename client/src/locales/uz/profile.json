@@ -1,0 +1,44 @@
+{
+  "title": "Profil",
+  "back": "Orqaga",
+  "unknownUser": "Noma'lum foydalanuvchi",
+  "stats": {
+    "rating": "Reyting",
+    "trips": "Safarlar",
+    "positive": "Ijobiy"
+  },
+  "driverMode": {
+    "title": "Haydovchi rejimi",
+    "on": "Safarlar joylay olasiz",
+    "off": "Faqat yo'lovchi sifatida"
+  },
+  "vehicle": {
+    "section": "Avtomobil ma'lumoti",
+    "add": "Avtomobil qo‘shish",
+    "edit": "Avtomobilni tahrirlash",
+    "cancel": "Bekor qilish",
+    "selectBrand": "Markani tanlang",
+    "selectModel": "Modelni tanlang",
+    "modelPlaceholder": "Model (Oldin markani tanlang)",
+    "modelInput": "Model",
+    "colorPlaceholder": "Rang (Masalan: Oq, Qora)",
+    "platePlaceholder": "Davlat raqami (01 A 777 AA)",
+    "saving": "Saqlanmoqda...",
+    "save": "Avtomobilni saqlash",
+    "saveChanges": "O‘zgarishlarni saqlash",
+    "editAria": "Tahrirlash",
+    "deleteAria": "O‘chirish",
+    "deleteConfirm": "Siz rostdan ham ushbu mashina ma'lumotlarini o'chirmoqchimisiz?",
+    "loadError": "Avtomobillar yuklanmadi",
+    "retry": "Qayta urinish",
+    "addFailed": "Avtomobilni qo‘shib bo‘lmadi",
+    "updateFailed": "Avtomobilni yangilab bo‘lmadi",
+    "deleteFailed": "Avtomobilni o‘chirib bo‘lmadi"
+  },
+  "settings": {
+    "notifications": "Bildirishnomalar",
+    "language": "Ilova tili",
+    "support": "Qo'llab-quvvatlash",
+    "userAds": "Mening e'lonlarim"
+  }
+}

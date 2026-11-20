@@ -1,0 +1,51 @@
+{
+  "header": {
+    "label": "Объявление",
+    "title": "Детали поездки",
+    "back": "Назад"
+  },
+  "state": {
+    "notSelected": "Объявление не выбрано",
+    "error": "Не удалось загрузить объявление",
+    "retry": "Повторить",
+    "notFound": "Объявление не найдено"
+  },
+  "type": {
+    "DRIVER": "Объявление водителя",
+    "PASSENGER": "Объявление пассажира"
+  },
+  "route": {
+    "from": "Откуда",
+    "to": "Куда"
+  },
+  "info": {
+    "title": "Информация",
+    "date": "Дата",
+    "departure": "Время отправления",
+    "freeSeats": "Свободные места",
+    "neededSeats": "Нужно мест",
+    "price": "Цена",
+    "negotiable": "Договорная",
+    "luggage": "Багаж",
+    "luggageYes": "Можно",
+    "luggageNo": "Нельзя",
+    "arrival": "Прибытие",
+    "notSpecified": "Не указано"
+  },
+  "seats_one": "{{count}} место",
+  "seats_few": "{{count}} места",
+  "seats_many": "{{count}} мест",
+  "seats_other": "{{count}} места",
+  "price": "{{value}} сум",
+  "person": {
+    "driver": "Водитель",
+    "passenger": "Пассажир",
+    "fallbackName": "Пользователь"
+  },
+  "description": "Комментарий",
+  "related": "Похожие объявления",
+  "contact": {
+    "call": "Позвонить",
+    "telegram": "Написать в Telegram"
+  }
+}

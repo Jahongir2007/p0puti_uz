@@ -1,0 +1,37 @@
+{
+  "greeting": "Salom 👋",
+  "title": "Qayerga ketamiz?",
+  "notifications": "Bildirishnomalar",
+  "hero": {
+    "line1": "Bir yo‘nalish.",
+    "line2": "Birga boramiz.",
+    "text": "O‘zingiz ketayotgan yo‘lga boshqa yo‘lovchilarni toping yoki o‘zingizga mos safarni toping."
+  },
+  "search": {
+    "from": "Qayerdan",
+    "to": "Qayerga",
+    "button": "Safar topish"
+  },
+  "quick": {
+    "title": "Tezkor amallar",
+    "findTitle": "Safar topish",
+    "findText": "Yo‘nalishingizga mos safarni toping",
+    "createTitle": "E’lon berish",
+    "createText": "O‘zingiz ketayotgan yo‘lni ulashing"
+  },
+  "latest": {
+    "title": "So‘nggi e’lonlar",
+    "all": "Barchasi",
+    "error": "E’lonlar yuklanmadi",
+    "retry": "Qayta urinish",
+    "empty": "Hozircha e’lonlar yo‘q",
+    "loadingMore": "Yuklanmoqda...",
+    "end": "Hammasi shu",
+    "seats_one": "{{count}} ta joy",
+    "seats_other": "{{count}} ta joy"
+  },
+  "community": {
+    "title": "Yo‘lingizni bo‘lishing",
+    "text": "Mashinada bo‘sh joyingiz bormi? Yo‘lingizni e’lon qiling va boshqa yo‘lovchilarni toping."
+  }
+}

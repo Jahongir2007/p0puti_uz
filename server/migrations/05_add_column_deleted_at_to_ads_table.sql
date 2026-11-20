@@ -1,0 +1,2 @@
+ALTER TABLE "ads"
+ADD COLUMN "deleted_at" TIMESTAMP;

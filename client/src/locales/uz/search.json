@@ -1,0 +1,48 @@
+{
+  "title": "Safar qidirish",
+  "back": "Orqaga",
+  "filter": "Filtrlash",
+  "form": {
+    "from": "Qayerdan",
+    "to": "Qayerga",
+    "fromPlaceholder": "Jo‘nash shahri",
+    "toPlaceholder": "Borish shahri",
+    "swap": "Yo‘nalishlarni almashtirish",
+    "date": "Sana",
+    "passengers": "Yo‘lovchi",
+    "decrease": "Kamaytirish",
+    "increase": "Oshirish",
+    "submit": "Qidirish"
+  },
+  "peopleCount_one": "{{count}} kishi",
+  "peopleCount_other": "{{count}} kishi",
+  "results": {
+    "search": "Qidiruv natijalari",
+    "latest": "So‘nggi e’lonlar",
+    "clear": "Tozalash",
+    "error": "E’lonlar yuklanmadi",
+    "retry": "Qayta urinish",
+    "empty": "Hozircha e’lonlar yo‘q",
+    "emptySearch": "Bu yo‘nalish bo‘yicha e’lon topilmadi",
+    "loadingMore": "Yuklanmoqda...",
+    "end": "Hammasi shu"
+  },
+  "card": {
+    "driver": "Haydovchi",
+    "passenger": "Yo‘lovchi",
+    "perSeat": "bir o‘rin uchun",
+    "currency": "so‘m"
+  },
+  "freeSeats_one": "{{count}} ta bo‘sh joy",
+  "freeSeats_other": "{{count}} ta bo‘sh joy",
+  "filterModal": {
+    "title": "Filtr",
+    "adType": "E'lon turi",
+    "drivers": "Haydovchilar",
+    "passengers": "Yo'lovchilar",
+    "apply": "Filtrni qo'llash",
+    "reset": "Tozalash",
+    "close": "Yopish",
+    "selectOne": "Kamida bittasini tanlang"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "title": "E’lon berish",
+  "back": "Orqaga",
+  "role": {
+    "driver": "Haydovchiman",
+    "passenger": "Yo‘lovchiman"
+  },
+  "route": {
+    "from": "Qayerdan",
+    "to": "Qayerga",
+    "fromPlaceholder": "Jo‘nash shahri",
+    "toPlaceholder": "Borish shahri"
+  },
+  "date": "Jo‘nash kuni",
+  "time": "Jo‘nash vaqti",
+  "duration": {
+    "label": "Taxminiy yo‘l vaqti",
+    "hours": "soat",
+    "minutes": "daq"
+  },
+  "arrival": {
+    "label": "Yetib borish vaqti:",
+    "nextDay": "(Ertasi kuni)"
+  },
+  "seats": {
+    "driverLabel": "Bo‘sh joylar",
+    "passengerLabel": "Yo‘lovchilar",
+    "decrease": "Kamaytirish",
+    "increase": "Oshirish"
+  },
+  "seatCount_one": "{{count}} ta o‘rin",
+  "seatCount_other": "{{count}} ta o‘rin",
+  "peopleCount_one": "{{count}} kishi",
+  "peopleCount_other": "{{count}} kishi",
+  "price": {
+    "driverLabel": "Narxi (1 kishi uchun)",
+    "passengerLabel": "Taklifingiz",
+    "placeholder": "Masalan: 100000",
+    "currency": "so‘m"
+  },
+  "vehicle": {
+    "label": "Avtomobilingiz",
+    "loading": "Yuklanmoqda...",
+    "none": "Sizda saqlangan avtomobil topilmadi"
+  },
+  "luggage": {
+    "title": "Yo‘lovchilarning yuklari?",
+    "yes": "✓ Yo‘lovchilarning yukini mashinangiz bagajida olib keta olasiz",
+    "no": "✕ Yo‘lovchilarning yukini mashinangiz bagajida olib keta olmaysiz"
+  },
+  "group": {
+    "title": "Boshqa yo‘lovchilar qo‘shilishi",
+    "subtitle": "Yo‘l kirani bo‘lishish uchun guruh tuzish",
+    "yes": "✓ E’loningizga boshqa yo‘lovchilar ham qo‘shila oladi. Birga taksi tutib yo‘l haqini bo‘lishishingiz mumkin.",
+    "no": "✕ Guruhlash o‘chirilgan. Faqat siz uchun alohida e’lon bo‘ladi."
+  },
+  "note": {
+    "label": "Qo‘shimcha izoh",
+    "placeholder": "Bagaj borligi, konditsioner yoki boshqa istaklaringiz..."
+  },
+  "submit": {
+    "idle": "E’lon joylashtirish",
+    "pending": "Joylashtirilmoqda..."
+  },
+  "result": {
+    "success": "E’lon muvaffaqiyatli joylashtirildi!",
+    "error": "E’lon yaratishda xatolik yuz berdi!"
+  }
+}

@@ -1,0 +1,86 @@
+// use prisma-8
+// Contract inferred from the live database schema. Edit as needed, then run `prisma contract emit`.
+model Users {
+  id          BigInt        @id(map: "users_pkey") @default(autoincrement())
+  telegramId  BigInt        @unique(map: "users_telegram_id_key") @map("telegram_id")
+  username    VarChar(255)?
+  firstName   VarChar(255)  @map("first_name")
+  lastName    VarChar(255)? @map("last_name")
+  photoUrl    String?       @map("photo_url")
+  phone       VarChar(30)?
+  isActive    Boolean       @default(true) @map("is_active")
+  createdAt   Timestamptz   @default(now()) @map("created_at")
+  updatedAt   Timestamptz   @default(now()) @map("updated_at")
+  lastLoginAt Timestamptz?  @map("last_login_at")
+
+  vehicles    Vehicles[]
+  ads         Ads[]
+
+  @@map("users")
+}
+
+model Vehicles {
+  id          BigInt       @id @default(autoincrement())
+  userId      BigInt       @map("user_id")
+
+  brand       VarChar(100)
+  model       VarChar(100)
+  color       VarChar(50)
+  plateNumber VarChar(20) @map("plate_number")
+
+  createdAt   Timestamptz @default(now()) @map("created_at")
+  deletedAt   Timestamptz? @map("deleted_at")
+
+  user        Users       @relation(fields: [userId], references: [id])
+  ads         Ads[]
+
+  @@map("vehicles")
+}
+
+model Ads {
+  id             BigInt         @id @default(autoincrement())
+
+  userId         BigInt         @map("user_id")
+  vehicleId      BigInt?        @map("vehicle_id")
+
+  type           AdType
+
+  fromLocation   VarChar(500)   @map("from_location")
+  toLocation     VarChar(500)   @map("to_location")
+
+  departureDate  Timestamptz    @map("departure_date")
+  departureTime  Timestamptz?   @map("departure_time")
+  arrivalTime    Timestamptz?   @map("arrival_time")
+
+  seats          Int
+
+  price          Int?
+
+  luggageAllowed Boolean        @default(true) @map("luggage_allowed")
+
+  description    VarChar(1000)?
+
+  status         AdStatus       @default(ACTIVE)
+
+  createdAt      Timestamptz    @default(now()) @map("created_at")
+  updatedAt      Timestamptz    @default(now()) @map("updated_at")
+  deletedAt      Timestamptz?   @map("deleted_at")
+
+  user           Users          @relation(fields:[userId], references:[id])
+
+  vehicle        Vehicles?      @relation(fields:[vehicleId], references:[id])
+
+  @@map("ads")
+}
+
+enum AdType {
+  DRIVER
+  PASSENGER
+}
+
+enum AdStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}

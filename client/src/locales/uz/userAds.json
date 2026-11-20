@@ -1,0 +1,33 @@
+{
+  "title": "Mening e’lonlarim",
+  "back": "Orqaga",
+  "error": "E’lonlar yuklanmadi",
+  "retry": "Qayta urinish",
+  "empty": "Sizda hali e’lonlar yo‘q",
+  "emptyAction": "E’lon berish",
+  "loadingMore": "Yuklanmoqda...",
+  "end": "Hammasi shu",
+  "type": {
+    "DRIVER": "Haydovchi",
+    "PASSENGER": "Yo‘lovchi"
+  },
+  "seats_one": "{{count}} ta joy",
+  "seats_other": "{{count}} ta joy",
+  "price": "{{value}} so‘m",
+  "negotiable": "Kelishiladi",
+  "edit": "Tahrirlash",
+  "delete": "O‘chirish",
+  "deleteConfirm": "Ushbu e’lonni o‘chirmoqchimisiz?",
+  "deleteFailed": "E’lonni o‘chirib bo‘lmadi",
+  "updateFailed": "E’lonni yangilab bo‘lmadi",
+  "form": {
+    "price": "Narx (so‘m)",
+    "seats": "Joylar soni",
+    "description": "Izoh",
+    "decrease": "Kamaytirish",
+    "increase": "Oshirish",
+    "cancel": "Bekor qilish",
+    "save": "Saqlash",
+    "saving": "Saqlanmoqda..."
+  }
+}

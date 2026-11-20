@@ -1,0 +1,52 @@
+{
+  "title": "Поиск поездки",
+  "back": "Назад",
+  "filter": "Фильтр",
+  "form": {
+    "from": "Откуда",
+    "to": "Куда",
+    "fromPlaceholder": "Город отправления",
+    "toPlaceholder": "Город назначения",
+    "swap": "Поменять направления",
+    "date": "Дата",
+    "passengers": "Пассажиры",
+    "decrease": "Уменьшить",
+    "increase": "Увеличить",
+    "submit": "Найти"
+  },
+  "peopleCount_one": "{{count}} человек",
+  "peopleCount_few": "{{count}} человека",
+  "peopleCount_many": "{{count}} человек",
+  "peopleCount_other": "{{count}} человека",
+  "results": {
+    "search": "Результаты поиска",
+    "latest": "Последние объявления",
+    "clear": "Сбросить",
+    "error": "Не удалось загрузить объявления",
+    "retry": "Повторить",
+    "empty": "Пока объявлений нет",
+    "emptySearch": "По этому направлению объявлений не найдено",
+    "loadingMore": "Загрузка...",
+    "end": "Больше объявлений нет"
+  },
+  "card": {
+    "driver": "Водитель",
+    "passenger": "Пассажир",
+    "perSeat": "за одно место",
+    "currency": "сум"
+  },
+  "freeSeats_one": "{{count}} свободное место",
+  "freeSeats_few": "{{count}} свободных места",
+  "freeSeats_many": "{{count}} свободных мест",
+  "freeSeats_other": "{{count}} свободных места",
+  "filterModal": {
+    "title": "Фильтр",
+    "adType": "Тип объявления",
+    "drivers": "Водители",
+    "passengers": "Пассажиры",
+    "apply": "Применить фильтр",
+    "reset": "Сбросить",
+    "close": "Закрыть",
+    "selectOne": "Выберите хотя бы один вариант"
+  }
+}
