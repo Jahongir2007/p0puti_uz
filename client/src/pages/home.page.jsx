@@ -49,7 +49,7 @@ function AdCard({ ad, onClick }) {
 
         <div className="min-w-0">
           <p className="truncate text-sm font-bold">
-            {localizedName(ad.from, lang)} → {localizedName(ad.to, lang)}
+            {localizedName(ad.fromLocation, lang)} → {localizedName(ad.toLocation, lang)}
           </p>
           <p className="mt-1 text-xs text-slate-400">
             {day}, {date} • {time}

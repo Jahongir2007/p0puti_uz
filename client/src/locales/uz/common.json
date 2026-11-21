@@ -3,6 +3,7 @@
     "home": "Bosh sahifa",
     "search": "Qidiruv",
     "create": "E’lon",
-    "profile": "Profil"
+    "profile": "Profil",
+    "sessionExpired": "Sessiya muddati tugadi. Iltimos, ilovani qayta oching."
   }
 }

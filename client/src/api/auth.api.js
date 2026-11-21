@@ -7,10 +7,6 @@ export async function authenticateTelegram() {
 
   const response = await api.post("/auth/telegram", { initData });
 
-  if(response.status === 401){
-    await authenticateTelegram();
-  }
-
   const { user: authUser, accessToken } = response.data.user.data; // same path you already use
 
   useAuthStore.getState().setAuth(authUser, accessToken);

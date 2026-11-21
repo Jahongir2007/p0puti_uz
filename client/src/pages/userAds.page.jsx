@@ -43,7 +43,10 @@ function UserAdCard({ ad, onOpen }) {
   const handleDelete = async () => {
     if (!(await showConfirm(t("deleteConfirm")))) return;
     deleteAd.mutate(ad.id, {
-      onError: () => showAlert(t("deleteFailed")),
+      onError: (error) => {
+        if(error.sessionExpired) return;
+        showAlert(t("deleteFailed"))
+      },
     });
   };
 
@@ -66,7 +69,10 @@ function UserAdCard({ ad, onOpen }) {
       },
       {
         onSuccess: () => setIsEditing(false),
-        onError: () => showAlert(t("updateFailed")),
+        onError: (error) => {
+          if(error.sessionExpired) return;
+          showAlert(t("updateFailed"))
+        },
       }
     );
   };
