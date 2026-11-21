@@ -1,0 +1,973 @@
+openapi: 3.0.3
+info:
+  title: P0Puti.uz API
+  version: 0.1.0
+  description: |
+    Backend for the P0Puti.uz Telegram mini app: drivers and passengers post rides between cities.
+
+    **Authentication.** Log in with `POST /auth/telegram`, sending the `initData` string that
+    Telegram gives the mini app. The response contains an `accessToken` (JWT, valid for 1 day).
+    Send it on every other request as `Authorization: Bearer <token>`.
+
+    **Conventions.**
+    - IDs are 64-bit integers and are sent as **strings** (`"42"`).
+    - Timestamps are ISO 8601 in UTC (`2026-11-24T04:00:00.000Z`).
+    - Ride dates (`YYYY-MM-DD`) and times (`HH:mm`) that clients send are **Tashkent local time** (UTC+5).
+    - Prices are whole numbers in so'm.
+    - Many endpoints answer `200`/`201` with `{ "success": false, ... }` instead of an HTTP error.
+      Always check `success`. Every `POST` returns `201`, even when `success` is `false`.
+    - Creating, updating and deleting ads is **asynchronous**: the API queues a job and a worker
+      applies it. The final result is sent to the user as a Telegram message.
+servers:
+  - url: http://localhost:3000/api
+    description: Local development
+  - url: https://{host}/api
+    description: Production
+    variables:
+      host:
+        default: your-domain.uz
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+  - name: Vehicles
+  - name: Ads
+
+paths:
+  /:
+    get:
+      summary: Health check
+      tags: [Auth]
+      security: []
+      responses:
+        '200':
+          description: Server is running.
+          content:
+            text/html:
+              schema:
+                type: string
+                example: Hello World!
+
+  /auth/telegram:
+    post:
+      summary: Log in with Telegram mini app data
+      description: |
+        Validates the Telegram `initData` signature with the bot token and rejects data older than
+        24 hours. Creates the user on first login and queues a welcome message from the bot.
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [initData]
+              properties:
+                initData:
+                  type: string
+                  description: '`window.Telegram.WebApp.initData`, unchanged.'
+                  example: auth_date=1795252511&user=%7B%22id%22%3A700000001%2C%22first_name%22%3A%22Ali%22%7D&hash=5f3c...
+      responses:
+        '201':
+          description: Logged in.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user:
+                    type: object
+                    required: [success, data]
+                    properties:
+                      success:
+                        type: boolean
+                        enum: [true]
+                      data:
+                        type: object
+                        required: [user, accessToken]
+                        properties:
+                          user:
+                            $ref: '#/components/schemas/User'
+                          accessToken:
+                            type: string
+                            description: JWT, valid for 1 day.
+        '401':
+          description: |
+            Telegram data is missing, has a wrong signature, or is older than 24 hours.
+            `message` is one of: `Telegram hash is missing`, `Invalid Telegram initData`,
+            `Telegram auth_date is missing`, `Telegram initData has expired`,
+            `Telegram user is missing`, `Invalid Telegram user data`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpError'
+              example:
+                message: Invalid Telegram initData
+                error: Unauthorized
+                statusCode: 401
+
+  /vehicle:
+    get:
+      summary: List my vehicles
+      description: Returns the current user's vehicles that are not deleted. The response is a plain array.
+      tags: [Vehicles]
+      responses:
+        '200':
+          description: The user's vehicles.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vehicle'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Add a vehicle
+      description: |
+        Plate numbers must be unique among vehicles that are not deleted.
+
+        Known issue: a duplicate plate number answers `201` with
+        `{ "success": true, "data": { "message": "This plate number is already exists" } }`
+        instead of an error. On success the response is the vehicle itself, without a `success` field.
+      tags: [Vehicles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleInput'
+      responses:
+        '201':
+          description: The created vehicle, or the duplicate-plate message described above.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Vehicle'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: This plate number is already exists
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /vehicle/{vehicleId}:
+    parameters:
+      - $ref: '#/components/parameters/VehicleId'
+    patch:
+      summary: Update my vehicle
+      description: All four fields are required. Only the owner can update a vehicle.
+      tags: [Vehicles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleInput'
+      responses:
+        '200':
+          description: '`success: false` when the vehicle does not exist or belongs to another user.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResult'
+              examples:
+                updated:
+                  value:
+                    success: true
+                    data:
+                      id: '1'
+                      userId: '1'
+                      brand: Chevrolet
+                      model: Gentra
+                      color: qora
+                      plateNumber: 01A123BC
+                      createdAt: '2026-11-21T09:15:11.830886Z'
+                      deletedAt: null
+                notFound:
+                  value:
+                    success: false
+                    data:
+                      message: User vehicle is not found
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/NonNumericId'
+    delete:
+      summary: Delete my vehicle
+      description: Soft delete (sets `deletedAt`). Only the owner can delete a vehicle.
+      tags: [Vehicles]
+      responses:
+        '200':
+          description: '`success: false` when the vehicle does not exist or belongs to another user.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/NonNumericId'
+
+  /ad:
+    post:
+      summary: Post a ride (driver) or a ride request (passenger)
+      description: |
+        Checks the request, then queues the ad. A worker saves it and the user gets a Telegram message:
+        "posted", "duplicate", "too close to another ad" or "in the past".
+
+        Drivers must also send `vehicleId`, `allowLuggage` and `calculatedArrivalTime`.
+
+        Known issue: `vehicleId` is not yet checked to belong to the user (fix in progress).
+      tags: [Ads]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostAdInput'
+            examples:
+              driver:
+                value:
+                  role: driver
+                  from: Toshkent
+                  to: Samarqand
+                  date: '2026-11-24'
+                  time: '09:00'
+                  price: 150000
+                  seats: 3
+                  note: Konditsioner bor
+                  vehicleId: 1
+                  allowLuggage: true
+                  calculatedArrivalTime: '13:00'
+                  estimatedDurationHours: 4
+                  estimatedDurationMinutes: 0
+              passenger:
+                value:
+                  role: passenger
+                  from: Toshkent
+                  to: Samarqand
+                  date: '2026-11-24'
+                  time: '18:00'
+                  price: 100000
+                  seats: 1
+                  note: ''
+                  allowGroupJoin: true
+      responses:
+        '201':
+          description: 'Queued (`success: true`) or refused (`success: false`). Check `success`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostAdResult'
+              examples:
+                queued:
+                  value:
+                    success: true
+                    message: Ad posted successfully
+                missingDriverFields:
+                  value:
+                    success: false
+                    message: Make sure all input fields are valid
+                duplicate:
+                  value:
+                    success: false
+                    message: User already has an ad for the same time range
+                inThePast:
+                  value:
+                    success: false
+                    error: Departure time is already passed
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /ad/latest:
+    get:
+      summary: Upcoming rides feed
+      description: |
+        Rides that have not departed yet, soonest first, with the author and vehicle.
+
+        Known issue: cancelled ads are included until their departure time.
+      tags: [Ads]
+      parameters:
+        - name: cursor
+          in: query
+          description: '`nextCursor` from the previous page (opaque string).'
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: 'One page of ads, or `success: false` with an error (for example, a broken cursor).'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AdPageWithAuthor'
+                  - $ref: '#/components/schemas/Failure'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /ad/search:
+    get:
+      summary: Search active rides by route and day
+      description: |
+        Exact match on both city names. For today, rides that already left are skipped.
+        Results are ordered by ad ID.
+
+        Known issue: `type` is accepted but not applied yet.
+      tags: [Ads]
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+          example: Toshkent
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+          example: Samarqand
+        - name: date
+          in: query
+          required: true
+          description: Day in Tashkent time.
+          schema:
+            type: string
+            format: date
+          example: '2026-11-24'
+        - name: passenger
+          in: query
+          description: Minimum free seats. Defaults to 1.
+          schema:
+            type: integer
+            minimum: 1
+        - name: type
+          in: query
+          description: Not applied yet (known issue). Must be one of the values if sent.
+          schema:
+            type: string
+            enum: [DRIVER, PASSENGER]
+        - name: cursor
+          in: query
+          description: '`nextCursor` from the previous page (an ad ID).'
+          schema:
+            type: string
+            pattern: '^\d+$'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: 'One page of ads, or `success: false` (for example `Invalid date, expected YYYY-MM-DD`).'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AdPageWithAuthor'
+                  - $ref: '#/components/schemas/Failure'
+        '400':
+          description: '`type` is not one of the allowed values.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /ad/user:
+    get:
+      summary: My active ads
+      description: The current user's ads with status `ACTIVE`, newest first.
+      tags: [Ads]
+      parameters:
+        - name: cursor
+          in: query
+          description: '`nextCursor` from the previous page (an ad ID).'
+          schema:
+            type: string
+            pattern: '^\d+$'
+        - name: limit
+          in: query
+          description: Page size, 1–50. Default 10. Must be an integer.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: One page of the user's ads.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AdPage'
+                  - $ref: '#/components/schemas/Failure'
+        '400':
+          description: '`limit` is not an integer.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpError'
+              example:
+                message: Validation failed (numeric string is expected)
+                error: Bad Request
+                statusCode: 400
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /ad/{id}:
+    parameters:
+      - $ref: '#/components/parameters/AdId'
+    get:
+      summary: One ad with related rides
+      description: |
+        The ad with its author, plus up to 10 upcoming active ads on the same route and type
+        (topped up with ads from the same starting city).
+      tags: [Ads]
+      responses:
+        '200':
+          description: 'The ad, or `success: false` with `Invalid ad id` / `Ad not found`.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [success, data]
+                    properties:
+                      success:
+                        type: boolean
+                        enum: [true]
+                      data:
+                        type: object
+                        required: [ad, related]
+                        properties:
+                          ad:
+                            $ref: '#/components/schemas/AdWithAuthor'
+                          related:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Ad'
+                  - $ref: '#/components/schemas/Failure'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      summary: Update my ad
+      description: |
+        Queues the change. The worker applies it only if the ad belongs to the user,
+        is still `ACTIVE` and has not departed; otherwise it is silently skipped.
+      tags: [Ads]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAdInput'
+      responses:
+        '200':
+          description: 'Queued, or `success: false` with `VALIDATION_ERROR` for a negative price.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Queued'
+                  - $ref: '#/components/schemas/Failure'
+              example:
+                success: true
+                message: Update ad job is queued
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/NonNumericId'
+    delete:
+      summary: Cancel my ad
+      description: |
+        Queues the cancellation. The worker sets the status to `CANCELLED` only if the ad belongs
+        to the user and is still `ACTIVE`; otherwise it is silently skipped.
+      tags: [Ads]
+      responses:
+        '200':
+          description: Queued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Queued'
+              example:
+                success: true
+                message: Delete ad job is queued
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/NonNumericId'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    AdId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^\d+$'
+      example: '42'
+    VehicleId:
+      name: vehicleId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^\d+$'
+      example: '7'
+    Limit:
+      name: limit
+      in: query
+      description: Page size, 1–50. Default 10.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 10
+
+  responses:
+    Unauthorized:
+      description: |
+        Missing, malformed, invalid or expired token. `message` is one of:
+        `Authorization header is missing`, `Invalid authorization header`, `Invalid or expired token`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/HttpError'
+          example:
+            message: Invalid or expired token
+            error: Unauthorized
+            statusCode: 401
+    ValidationFailed:
+      description: The body failed validation. `message` lists every invalid field. Unknown fields are removed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+    NonNumericId:
+      description: 'Known issue: a non-numeric ID in the path causes an internal error instead of `400`.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/HttpError'
+          example:
+            statusCode: 500
+            message: Internal server error
+
+  schemas:
+    Id:
+      type: string
+      pattern: '^\d+$'
+      description: 64-bit integer as a string.
+      example: '42'
+
+    User:
+      type: object
+      required: [id, telegramId, firstName, isActive, createdAt, updatedAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        telegramId:
+          $ref: '#/components/schemas/Id'
+        firstName:
+          type: string
+          maxLength: 255
+        lastName:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+          description: Telegram username, without `@`.
+        photoUrl:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    VehicleInput:
+      type: object
+      required: [brand, model, color, plateNumber]
+      properties:
+        brand:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Chevrolet
+        model:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Cobalt
+        color:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: oq
+        plateNumber:
+          type: string
+          minLength: 1
+          maxLength: 20
+          example: 01A123BC
+
+    Vehicle:
+      type: object
+      required: [id, userId, brand, model, color, plateNumber, createdAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        userId:
+          $ref: '#/components/schemas/Id'
+        brand:
+          type: string
+        model:
+          type: string
+        color:
+          type: string
+        plateNumber:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    VehicleResult:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/Vehicle'
+            - type: object
+              properties:
+                message:
+                  type: string
+                  example: User vehicle is not found
+
+    PostAdInput:
+      type: object
+      required: [role, from, to, date, time, price, seats, note]
+      properties:
+        role:
+          type: string
+          enum: [driver, passenger]
+        from:
+          type: string
+          maxLength: 500
+          description: City name, as listed in the client's locations file.
+        to:
+          type: string
+          maxLength: 500
+        date:
+          type: string
+          format: date
+          description: Departure day in Tashkent time.
+        time:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+          description: Departure time in Tashkent time.
+          example: '09:00'
+        price:
+          type: integer
+          description: Per person, in so'm.
+        seats:
+          type: integer
+          description: Free seats (driver) or number of people (passenger).
+        note:
+          type: string
+          maxLength: 1000
+          description: Required, may be empty.
+        vehicleId:
+          type: integer
+          description: Required for drivers. One of the user's vehicles.
+        allowLuggage:
+          type: boolean
+          description: Required for drivers.
+        calculatedArrivalTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+          description: Required for drivers. Arrival time in Tashkent time; if earlier than departure, it means the next day.
+        estimatedDurationHours:
+          type: integer
+          description: Accepted but not stored.
+        estimatedDurationMinutes:
+          type: integer
+          description: Accepted but not stored.
+        carModel:
+          type: string
+          description: Accepted but not stored.
+        allowGroupJoin:
+          type: boolean
+          description: Passengers only. Accepted but not stored.
+
+    PostAdResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        error:
+          type: string
+          description: Set instead of `message` for unexpected errors and past departure times.
+        code:
+          type: string
+          enum: [VEHICLE_NOT_FOUND, AD_DUPLICATE, AD_TOO_CLOSE, AD_IN_PAST, INVALID_INPUT]
+          description: |
+            Planned, not sent yet. When `success` is `false`, a machine-readable reason.
+            The mini app already shows a translated message for each value.
+
+    UpdateAdInput:
+      type: object
+      required: [price, seats]
+      properties:
+        price:
+          type: number
+          minimum: 0
+        seats:
+          type: number
+        description:
+          type: string
+          maxLength: 1000
+
+    Ad:
+      type: object
+      required: [id, userId, type, fromLocation, toLocation, departureDate, seats, luggageAllowed, status, createdAt, updatedAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        userId:
+          $ref: '#/components/schemas/Id'
+        vehicleId:
+          allOf:
+            - $ref: '#/components/schemas/Id'
+          nullable: true
+        type:
+          type: string
+          enum: [DRIVER, PASSENGER]
+        fromLocation:
+          type: string
+        toLocation:
+          type: string
+        departureDate:
+          type: string
+          format: date-time
+          description: Midnight of the departure day in Tashkent, in UTC (for example `2026-11-23T19:00:00.000Z`).
+        departureTime:
+          type: string
+          format: date-time
+          nullable: true
+        arrivalTime:
+          type: string
+          format: date-time
+          nullable: true
+          description: Drivers only.
+        seats:
+          type: integer
+        price:
+          type: integer
+          nullable: true
+        luggageAllowed:
+          type: boolean
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [ACTIVE, COMPLETED, CANCELLED, EXPIRED]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    AdAuthor:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        photoUrl:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+
+    AdVehicle:
+      type: object
+      nullable: true
+      properties:
+        brand:
+          type: string
+        model:
+          type: string
+        color:
+          type: string
+        plateNumber:
+          type: string
+
+    AdWithAuthor:
+      allOf:
+        - $ref: '#/components/schemas/Ad'
+        - type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/AdAuthor'
+
+    AdWithAuthorAndVehicle:
+      allOf:
+        - $ref: '#/components/schemas/AdWithAuthor'
+        - type: object
+          properties:
+            vehicle:
+              $ref: '#/components/schemas/AdVehicle'
+
+    AdPage:
+      type: object
+      required: [success, data, nextCursor]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ad'
+        nextCursor:
+          type: string
+          nullable: true
+          description: Pass as `cursor` to get the next page. `null` on the last page.
+
+    AdPageWithAuthor:
+      type: object
+      required: [success, data, nextCursor]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdWithAuthorAndVehicle'
+        nextCursor:
+          type: string
+          nullable: true
+
+    Queued:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+
+    Failure:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        error:
+          type: string
+          example: Invalid ad id
+
+    HttpError:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: string
+
+    ValidationErrorResponse:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode:
+          type: integer
+          enum: [400]
+        error:
+          type: string
+          example: Bad Request
+        message:
+          type: array
+          items:
+            type: object
+            properties:
+              property:
+                type: string
+                example: price
+              value:
+                description: The value that was sent, if any.
+              constraints:
+                type: object
+                additionalProperties:
+                  type: string
+                example:
+                  isInt: price must be an integer number
+              children:
+                type: array
+                items:
+                  type: object

@@ -1,0 +1,1262 @@
+{
+  "info": {
+    "_postman_id": "ecd601db-360f-47b5-b920-5a089dc9424a",
+    "name": "P0Puti.uz API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Tests for the P0Puti.uz backend. Full API reference: `server/openapi.yml`.\n\n**Setup**\n1. Import this collection and `p0puti-local.postman_environment.json`, then select the **P0Puti – local** environment.\n2. In the environment, set **botToken** to the `TELEGRAM_BOT_TOKEN` from `server/.env`. The login requests use it to sign a test Telegram login, so you don't need the mini app.\n3. Optional: set **userA_telegramId** to your own Telegram ID to receive the bot's messages. User B is a made-up ID, so its bot messages fail in the bot log; that's expected.\n4. Start the API and the worker (`node dist/main.js`, `node dist/worker.main.js`). The bot is optional.\n5. Run the whole collection with the Collection Runner, top to bottom. Later requests use IDs saved by earlier ones.\n\n**Safety:** the bot token can sign a login for any Telegram user. Keep it only in your local environment's current value, and never put your production token in a shared Postman workspace.\n\n**Expected failure:** \"User A cannot post an ad with user B's vehicle\" fails until the vehicle ownership check is merged."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Auth",
+      "description": "Logs in two test users. Run this first: everything else needs their tokens.",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login as user A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/telegram",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "telegram"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"initData\": \"{{initData}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Signs a Telegram login exactly like Telegram does, using the bot token from the environment,",
+                  "// so you can log in without opening the mini app. Never use your production bot token here.",
+                  "const CryptoJS = require('crypto-js');",
+                  "const botToken = pm.environment.get('botToken');",
+                  "if (!botToken) {",
+                  "  throw new Error('Set botToken in the environment: the TELEGRAM_BOT_TOKEN from server/.env');",
+                  "}",
+                  "const user = {",
+                  "  id: Number(pm.environment.get('userA_telegramId') || 700000001),",
+                  "  first_name: 'Test',",
+                  "  last_name: 'User A',",
+                  "  username: 'p0puti_test_a',",
+                  "};",
+                  "const fields = { auth_date: String(Math.floor(Date.now() / 1000)), user: JSON.stringify(user) };",
+                  "const dataCheckString = Object.keys(fields).sort().map((k) => k + '=' + fields[k]).join('\\n');",
+                  "const secretKey = CryptoJS.HmacSHA256(botToken, 'WebAppData');",
+                  "const hash = CryptoJS.HmacSHA256(dataCheckString, secretKey).toString(CryptoJS.enc.Hex);",
+                  "pm.variables.set('initData', Object.entries({ ...fields, hash })",
+                  "  .map(([k, v]) => k + '=' + encodeURIComponent(v))",
+                  "  .join('&'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeds (201)', () => pm.expect(pm.response.code).to.eql(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Response contains an access token', () => pm.expect(body.user.data.accessToken).to.be.a('string'));",
+                  "pm.environment.set('accessToken', body.user.data.accessToken);",
+                  "pm.environment.set('userId', body.user.data.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login as user B (second test user)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/telegram",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "telegram"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"initData\": \"{{initData}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Signs a Telegram login exactly like Telegram does, using the bot token from the environment,",
+                  "// so you can log in without opening the mini app. Never use your production bot token here.",
+                  "const CryptoJS = require('crypto-js');",
+                  "const botToken = pm.environment.get('botToken');",
+                  "if (!botToken) {",
+                  "  throw new Error('Set botToken in the environment: the TELEGRAM_BOT_TOKEN from server/.env');",
+                  "}",
+                  "const user = {",
+                  "  id: Number(pm.environment.get('userB_telegramId') || 700000002),",
+                  "  first_name: 'Test',",
+                  "  last_name: 'User B',",
+                  "  username: 'p0puti_test_b',",
+                  "};",
+                  "const fields = { auth_date: String(Math.floor(Date.now() / 1000)), user: JSON.stringify(user) };",
+                  "const dataCheckString = Object.keys(fields).sort().map((k) => k + '=' + fields[k]).join('\\n');",
+                  "const secretKey = CryptoJS.HmacSHA256(botToken, 'WebAppData');",
+                  "const hash = CryptoJS.HmacSHA256(dataCheckString, secretKey).toString(CryptoJS.enc.Hex);",
+                  "pm.variables.set('initData', Object.entries({ ...fields, hash })",
+                  "  .map(([k, v]) => k + '=' + encodeURIComponent(v))",
+                  "  .join('&'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeds (201)', () => pm.expect(pm.response.code).to.eql(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Response contains an access token', () => pm.expect(body.user.data.accessToken).to.be.a('string'));",
+                  "pm.environment.set('accessTokenB', body.user.data.accessToken);",
+                  "pm.environment.set('userIdB', body.user.data.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login with forged initData is rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/telegram",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "telegram"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"initData\": \"auth_date=1&user=%7B%22id%22%3A1%7D&hash=00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', () => pm.expect(pm.response.code).to.eql(401));",
+                  "pm.test('Says the signature is invalid', () => pm.expect(pm.response.json().message).to.eql('Invalid Telegram initData'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Request without a token is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicle"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', () => pm.expect(pm.response.code).to.eql(401));",
+                  "pm.test('Says the header is missing', () => pm.expect(pm.response.json().message).to.eql('Authorization header is missing'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Request with a fake token is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicle"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "not-a-real-token",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', () => pm.expect(pm.response.code).to.eql(401));",
+                  "pm.test('Says the token is invalid', () => pm.expect(pm.response.json().message).to.eql('Invalid or expired token'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Vehicles (user A)",
+      "description": "Creates a vehicle for user A and saves its ID as vehicleId.",
+      "item": [
+        {
+          "name": "Add a vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vehicle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicle"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Chevrolet\",\n  \"model\": \"Cobalt\",\n  \"color\": \"oq\",\n  \"plateNumber\": \"{{plateA}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// A random plate number, so re-running the collection doesn't hit \"already exists\"",
+                  "pm.environment.set('plateA', '01T' + Math.floor(10000 + Math.random() * 89999) + 'AA');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.expect(pm.response.code).to.eql(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns the new vehicle', () => pm.expect(body.id).to.be.a('string'));",
+                  "pm.environment.set('vehicleId', body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List my vehicles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicle"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Contains the new vehicle', () => pm.expect(pm.response.json().map((v) => v.id)).to.include(pm.environment.get('vehicleId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update my vehicle",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vehicle/{{vehicleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicle",
+                "{{vehicleId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Chevrolet\",\n  \"model\": \"Gentra\",\n  \"color\": \"qora\",\n  \"plateNumber\": \"{{plateA}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test('Model was changed', () => pm.expect(pm.response.json().data.model).to.eql('Gentra'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Ads (user A)",
+      "description": "Posts a driver ad and a passenger ad on a random future day (adDate), then reads, updates and cancels the driver ad.",
+      "item": [
+        {
+          "name": "Post a driver ad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ad",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"driver\",\n  \"from\": \"Toshkent\",\n  \"to\": \"Samarqand\",\n  \"date\": \"{{adDate}}\",\n  \"time\": \"09:00\",\n  \"price\": 150000,\n  \"seats\": 3,\n  \"note\": \"Postman test\",\n  \"vehicleId\": {{vehicleId}},\n  \"allowLuggage\": true,\n  \"calculatedArrivalTime\": \"13:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// A random future day (2–300 days ahead, Tashkent time), so re-running the collection doesn't hit \"duplicate\"",
+                  "const days = 2 + Math.floor(Math.random() * 299);",
+                  "pm.environment.set('adDate', new Date(Date.now() + days * 86400000 + 5 * 3600000).toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.expect(pm.response.code).to.eql(201));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Post a passenger ad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ad",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"passenger\",\n  \"from\": \"Toshkent\",\n  \"to\": \"Samarqand\",\n  \"date\": \"{{adDate}}\",\n  \"time\": \"18:00\",\n  \"price\": 100000,\n  \"seats\": 1,\n  \"note\": \"\",\n  \"allowGroupJoin\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.expect(pm.response.code).to.eql(201));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver ad without vehicle fields is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ad",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"driver\",\n  \"from\": \"Toshkent\",\n  \"to\": \"Samarqand\",\n  \"date\": \"{{adDate}}\",\n  \"time\": \"22:00\",\n  \"price\": 1,\n  \"seats\": 1,\n  \"note\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.expect(pm.response.code).to.eql(201));",
+                  "pm.test('success is false', () => pm.expect(pm.response.json().success).to.eql(false));",
+                  "pm.test('Explains what is wrong', () => pm.expect(pm.response.json().message).to.eql('Make sure all input fields are valid'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid ad body is rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ad",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"pilot\",\n  \"price\": \"abc\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.expect(pm.response.code).to.eql(400));",
+                  "pm.test('Lists the invalid fields', () => pm.expect(pm.response.json().message.map((e) => e.property)).to.include.members(['role', 'price']));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My ads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ad/user?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad",
+                "user"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Ads are saved by the worker in the background: give it a moment.",
+                  "setTimeout(() => {}, 2000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "const tashkentDay = (iso) => new Date(new Date(iso).getTime() + 5 * 3600 * 1000).toISOString().slice(0, 10);",
+                  "const onDay = pm.response.json().data.filter((a) => tashkentDay(a.departureTime) === pm.environment.get('adDate'));",
+                  "pm.test('Both new ads were saved by the worker', () => pm.expect(onDay.map((a) => a.type)).to.include.members(['DRIVER', 'PASSENGER']));",
+                  "const driver = onDay.find((a) => a.type === 'DRIVER');",
+                  "if (driver) pm.environment.set('adId', driver.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upcoming rides feed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ad/latest?limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad",
+                "latest"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test('Returns a list', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search rides",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ad/search?from=Toshkent&to=Samarqand&date={{adDate}}&passenger=1&limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "Toshkent"
+                },
+                {
+                  "key": "to",
+                  "value": "Samarqand"
+                },
+                {
+                  "key": "date",
+                  "value": "{{adDate}}"
+                },
+                {
+                  "key": "passenger",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "type",
+                  "value": "DRIVER",
+                  "disabled": true,
+                  "description": "Not applied by the server yet (known issue)"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test('Finds the driver ad', () => pm.expect(pm.response.json().data.map((a) => a.id)).to.include(pm.environment.get('adId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get the driver ad",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ad/{{adId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad",
+                "{{adId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "const ad = pm.response.json().data.ad;",
+                  "pm.test('Is the right ad', () => pm.expect(ad.id).to.eql(pm.environment.get('adId')));",
+                  "pm.test('Includes the author', () => pm.expect(ad.user.firstName).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update the driver ad",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ad/{{adId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad",
+                "{{adId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 160000,\n  \"seats\": 2,\n  \"description\": \"Updated from Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check the update was applied",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ad/{{adId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad",
+                "{{adId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Ads are saved by the worker in the background: give it a moment.",
+                  "setTimeout(() => {}, 1500);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "const ad = pm.response.json().data.ad;",
+                  "pm.test('Price and seats changed', () => {",
+                  "  pm.expect(ad.price).to.eql(160000);",
+                  "  pm.expect(ad.seats).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel the driver ad",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ad/{{adId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad",
+                "{{adId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check the ad was cancelled",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ad/{{adId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad",
+                "{{adId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Ads are saved by the worker in the background: give it a moment.",
+                  "setTimeout(() => {}, 1500);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Status is CANCELLED', () => pm.expect(pm.response.json().data.ad.status).to.eql('CANCELLED'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Security checks",
+      "description": "User A must not be able to use or change user B's vehicle.",
+      "item": [
+        {
+          "name": "User B adds a vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vehicle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicle"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Daewoo\",\n  \"model\": \"Nexia\",\n  \"color\": \"oq\",\n  \"plateNumber\": \"{{plateB}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenB}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('plateB', '01T' + Math.floor(10000 + Math.random() * 89999) + 'BB');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.expect(pm.response.code).to.eql(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns the new vehicle', () => pm.expect(body.id).to.be.a('string'));",
+                  "pm.environment.set('otherUserVehicleId', body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "User A cannot post an ad with user B's vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ad",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ad"
+              ]
+            },
+            "description": "Fails until the vehicle ownership check is merged: right now the server accepts it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"driver\",\n  \"from\": \"Toshkent\",\n  \"to\": \"Samarqand\",\n  \"date\": \"{{adDate}}\",\n  \"time\": \"15:00\",\n  \"price\": 150000,\n  \"seats\": 3,\n  \"note\": \"Ownership check\",\n  \"vehicleId\": {{otherUserVehicleId}},\n  \"allowLuggage\": true,\n  \"calculatedArrivalTime\": \"17:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.expect(pm.response.code).to.eql(201));",
+                  "pm.test('success is false', () => pm.expect(pm.response.json().success).to.eql(false));",
+                  "pm.test('Reason is VEHICLE_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('VEHICLE_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "User A cannot update user B's vehicle",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vehicle/{{otherUserVehicleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicle",
+                "{{otherUserVehicleId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Hacked\",\n  \"model\": \"Hacked\",\n  \"color\": \"Hacked\",\n  \"plateNumber\": \"{{plateB}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('success is false', () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "User A cannot delete user B's vehicle",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicle/{{otherUserVehicleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicle",
+                "{{otherUserVehicleId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('success is false', () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Cleanup",
+      "description": "Deletes the test vehicles. Ads are left as they are (cancelled or expiring).",
+      "item": [
+        {
+          "name": "User A deletes their vehicle",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicle/{{vehicleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicle",
+                "{{vehicleId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "User B deletes their vehicle",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicle/{{otherUserVehicleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicle",
+                "{{otherUserVehicleId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenB}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
