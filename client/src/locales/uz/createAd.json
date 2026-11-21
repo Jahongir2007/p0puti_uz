@@ -93,6 +93,10 @@
         "title": "Ma’lumotlarni tekshiring",
         "message": "Barcha maydonlarni to‘g‘ri to‘ldiring va qayta urinib ko‘ring."
       }
+    },
+    "posted": {
+      "title": "E’loningiz joylashtirildi",
+      "message": "Endi uni boshqalar ko‘radi. E’lonlaringizni profilda boshqarishingiz mumkin."
     }
   }
 }

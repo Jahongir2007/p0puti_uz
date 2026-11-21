@@ -18,8 +18,14 @@
   "edit": "Tahrirlash",
   "delete": "O‘chirish",
   "deleteConfirm": "Ushbu e’lonni o‘chirmoqchimisiz?",
-  "deleteFailed": "E’lonni o‘chirib bo‘lmadi",
-  "updateFailed": "E’lonni yangilab bo‘lmadi",
+  "deleteFailed": {
+    "title": "E’lon o‘chirilmadi",
+    "message": "Nimadir xato ketdi. Birozdan so‘ng qayta urinib ko‘ring."
+  },
+  "updateFailed": {
+    "title": "E’lon yangilanmadi",
+    "message": "Nimadir xato ketdi. Birozdan so‘ng qayta urinib ko‘ring."
+  },
   "form": {
     "price": "Narx (so‘m)",
     "seats": "Joylar soni",
@@ -29,5 +35,16 @@
     "cancel": "Bekor qilish",
     "save": "Saqlash",
     "saving": "Saqlanmoqda..."
+  },
+  "ok": "Tushunarli",
+  "errors": {
+    "AD_NOT_FOUND": {
+      "title": "E’lon topilmadi",
+      "message": "Bu e’lon allaqachon o‘chirilgan yoki muddati tugagan."
+    },
+    "AD_DEPARTED": {
+      "title": "Safar boshlangan",
+      "message": "Jo‘nash vaqti o‘tgan e’lonni o‘zgartirib bo‘lmaydi."
+    }
   }
 }
