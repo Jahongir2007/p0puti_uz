@@ -36,30 +36,32 @@ export async function getTelegramUserVehicles() {
         //     String(error)
         // );
 
-        console.error("REQUEST ERROR:", error);
-        console.error("Response:", error.response);
-        console.error("Request:", error.request);
+        // console.error("REQUEST ERROR:", error);
+        // console.error("Response:", error.response);
+        // console.error("Request:", error.request);
+
+        throw error;
     }
 }
 
 export async function createTelegramUserVehicle(vehicleData) {
   const accessToken = useAuthStore.getState().accessToken;
 
-    alert(
-        accessToken
-            ? "🔑 Token exists"
-            : "❌ NO TOKEN"
-    );
+    // alert(
+    //     accessToken
+    //         ? "🔑 Token exists"
+    //         : "❌ NO TOKEN"
+    // );
 
-    alert(
-        `Base URL: ${api.defaults.baseURL}\n` +
-        `Path: /vehicle`
-    );
+    // alert(
+    //     `Base URL: ${api.defaults.baseURL}\n` +
+    //     `Path: /vehicle`
+    // );
 
-    alert(`Body: ${JSON.stringify(vehicleData, null, 2)}`);
+    // alert(`Body: ${JSON.stringify(vehicleData, null, 2)}`);
 
     try{
-        alert("🚀 About to send request");
+        // alert("🚀 About to send request");
         
         const response = await api.post(
             "/vehicle",
@@ -71,16 +73,17 @@ export async function createTelegramUserVehicle(vehicleData) {
             }
         );
 
-        alert("✅ Response received");
+        // alert("✅ Response received");
 
-        alert(JSON.stringify(response.data, null, 2));
+        // alert(JSON.stringify(response.data, null, 2));
 
         return response.data;
     }catch(error){
-        alert(
-            "❌ REQUEST FAILED\n\n" +
-            String(error)
-        );
+        // alert(
+        //     "❌ REQUEST FAILED\n\n" +
+        //     String(error)
+        // );
+        throw error;
     }
 }
 
@@ -117,26 +120,27 @@ export async function updateTelegramUserVehicle(vehicleId, vehicleData){
 
         return response.data;
     }catch(error){
-        alert(
-            "❌ REQUEST FAILED\n\n" +
-            String(error)
-        );
+        // alert(
+        //     "❌ REQUEST FAILED\n\n" +
+        //     String(error)
+        // );
+        throw error;
     }
 }
 
 export async function deleteTelegramUserVehicle(vehicleId){
     const accessToken = useAuthStore.getState().accessToken;
 
-    alert(
-        accessToken
-            ? "🔑 Token exists"
-            : "❌ NO TOKEN"
-    );
+    // alert(
+    //     accessToken
+    //         ? "🔑 Token exists"
+    //         : "❌ NO TOKEN"
+    // );
 
-    alert(
-        `Base URL: ${api.defaults.baseURL}\n` +
-        `Path: /vehicle/${vehicleId}`
-    );
+    // alert(
+    //     `Base URL: ${api.defaults.baseURL}\n` +
+    //     `Path: /vehicle/${vehicleId}`
+    // );
 
     // alert(`Body: ${JSON.stringify(vehicleData, null, 2)}`);
 
@@ -150,15 +154,16 @@ export async function deleteTelegramUserVehicle(vehicleId){
             }
         );
 
-        alert("✅ Response received");
+        // alert("✅ Response received");
 
-        alert(JSON.stringify(response.data, null, 2));
+        // alert(JSON.stringify(response.data, null, 2));
 
         return response.data;
     }catch(error){
-        alert(
-            "❌ REQUEST FAILED\n\n" +
-            String(error)
-        );
+        // alert(
+        //     "❌ REQUEST FAILED\n\n" +
+        //     String(error)
+        // );
+        throw error;
     }
 }

@@ -23,7 +23,7 @@ export async function postTelegramUserAd(adData) {
 
     return response.data;
   } catch (error) {
-    alert(`CATCH ${JSON.stringify(error, null, 2)}`);
+    // alert(`CATCH ${JSON.stringify(error, null, 2)}`);
     throw error;
   }
 }
@@ -48,7 +48,7 @@ export async function getLatestAds(cursor, limit) {
 
     return response.data;
   } catch (error) {
-    alert(`CATCH ${JSON.stringify(error, null, 2)}`);
+    // alert(`CATCH ${JSON.stringify(error, null, 2)}`);
     throw error;
   }
 }
@@ -67,7 +67,7 @@ export async function getAdById(id){
 
     return data.data;
   }catch(err){
-    alert(`CATCH ${JSON.stringify(err, null, 2)}`);
+    // alert(`CATCH ${JSON.stringify(err, null, 2)}`);
     throw err;
   }
 }
@@ -82,11 +82,11 @@ export const searchAds = async ({ from, to, date, passengers, type, cursor, limi
     if (!data.success) throw new Error(data.error ?? "Qidiruvda xatolik");
     return data; // { items: [...], nextCursor: string | null }
   } catch (err) {
-    alert(
-      `CATCH: ${err.message}\n` +
-      `Status: ${err.response?.status}\n` +
-      `Response: ${JSON.stringify(err.response?.data)}`
-    );
+    // alert(
+    //   `CATCH: ${err.message}\n` +
+    //   `Status: ${err.response?.status}\n` +
+    //   `Response: ${JSON.stringify(err.response?.data)}`
+    // );
     throw err;
   }
 };
@@ -101,11 +101,11 @@ export const getTelegramUserAds = async ({cursor, limit = 10}) => {
     if(!data.success) throw new Error(data?.error ?? "Foydalanuvchi e'lonlarini olishda xatolik yuz berdi");
     return data;
   }catch(err){
-    alert(
-      `CATCH: ${err.message}\n` +
-      `Status: ${err.response?.status}\n` +
-      `Response: ${JSON.stringify(err.response?.data)}`
-    );
+    // alert(
+    //   `CATCH: ${err.message}\n` +
+    //   `Status: ${err.response?.status}\n` +
+    //   `Response: ${JSON.stringify(err.response?.data)}`
+    // );
     throw err;
   }
 }

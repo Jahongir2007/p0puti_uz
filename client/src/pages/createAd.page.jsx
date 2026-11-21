@@ -139,6 +139,7 @@ function CreateAdPage() {
         alert(t("result.success"));
       },
       onError: (error) => {
+        if(error.sessionExpired) return;
         console.error("Failed to create ad:", error);
         alert(t("result.error"));
       },

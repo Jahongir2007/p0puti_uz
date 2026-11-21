@@ -16,7 +16,11 @@ import "./i18n";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 60_000, refetchOnWindowFocus: false },
+    queries: { 
+      staleTime: 60_000, 
+      refetchOnWindowFocus: false,
+      retry: (count, err) => !err?.sessionExpired && count < 3, 
+    },
   },
 });
 

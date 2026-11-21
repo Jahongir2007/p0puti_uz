@@ -299,6 +299,7 @@ function ProfilePage({ onNavigate }) {
       setAddCarForm(EMPTY_CAR);
     },
     onError: (err) => {
+      if(err.sessionExpired) return;
       console.error(err);
       showAlert(t("vehicle.addFailed"));
     },
@@ -312,6 +313,7 @@ function ProfilePage({ onNavigate }) {
       setEditCarForm(EMPTY_CAR);
     },
     onError: (err) => {
+      if(err.sessionExpired) return;
       console.error(err);
       showAlert(t("vehicle.updateFailed"));
     },
@@ -321,6 +323,7 @@ function ProfilePage({ onNavigate }) {
     mutationFn: ({ vehicleId }) => deleteTelegramUserVehicle(vehicleId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vehicles"] }),
     onError: (err) => {
+      if(err.sessionExpired) return;
       console.error(err);
       showAlert(t("vehicle.deleteFailed"));
     },

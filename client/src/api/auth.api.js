@@ -1,12 +1,6 @@
 import api from "./axios.api";
 import { useAuthStore } from "../stores/auth.store";
 
-export async function getMe(){
-    const res = await api.get("/telegram/auth/me");
-
-    return res.data;
-}
-
 export async function authenticateTelegram() {
   const initData = window.Telegram?.WebApp?.initData;
   if (!initData) throw new Error("Ilovani Telegram ichida oching"); // opened outside Telegram

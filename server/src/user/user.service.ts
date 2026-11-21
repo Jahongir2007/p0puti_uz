@@ -43,14 +43,14 @@ export class UserService {
             } satisfies TelegramEventJob);
         }
 
-        console.log("Signing JWT token");
+        // console.log("Signing JWT token");
 
         const accessToken = this.jwtService.sign({
             sub: user.id,
             telegramId: telegramUser.id.toString(),
         });
 
-        console.log("JWT token signed:", accessToken);
+        // console.log("JWT token signed:", accessToken);
 
         return {
             success: true,

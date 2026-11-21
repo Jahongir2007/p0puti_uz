@@ -10,7 +10,7 @@ export class AuthService {
     ) {}
 
     async authenticateTelegram(initData: string) {
-        console.log("Receiving initData:", initData);
+        // console.log("Receiving initData:", initData);
         const telegramUser = this.telegramService.validateInitData(initData);
         
         const user = await this.userService.createOrFindUserFromTelegram(telegramUser);
