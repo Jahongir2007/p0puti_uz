@@ -6,6 +6,7 @@ import { AdController } from './ad.controller.js';
 import { AdService } from './ad.service.js';
 import { RabbitMQModule } from '../infrastructure/rabbitmq/rabbitmq.module.js';
 import { MetricsModule } from '../infrastructure/metrics/metrics.module.js';
+import { AdWriteService } from './ad-write.service.js';
 
 @Module({
   imports: [
@@ -23,6 +24,6 @@ import { MetricsModule } from '../infrastructure/metrics/metrics.module.js';
 
   controllers: [AdController],
 
-  providers: [AdService],
+  providers: [AdService, AdWriteService],
 })
 export class AdModule {}

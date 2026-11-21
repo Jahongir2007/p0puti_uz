@@ -5,174 +5,50 @@ import { MetricsService } from '../infrastructure/metrics/metrics.service.js';
 import { db } from '../prisma/db.js';
 // import { Temporal } from '@js-temporal/polyfill';
 import { Temporal } from 'temporal-polyfill';
-import { tashkentToInstant, Cursor, encodeCursor, decodeCursor, serialize } from '../utils/helpers.js';
+import { encodeCursor, decodeCursor, serialize } from '../utils/helpers.js';
 import { not } from '@prisma/orm-postgres/orm-client';
 import { Varchar } from '@prisma/orm-postgres/target/codec-types';
 import { UpdateAdInterface } from './interface/updateAd.interface.js';
 import { AdType } from './enum/adType.enum.js';
+import { AdWriteMode, AdWriteService, readAdWriteMode, NewAd } from './ad-write.service.js';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AdService {
+    private readonly mode: AdWriteMode
+
     constructor(
         private readonly rabbitMQ: RabbitMQService,
         private readonly metrics: MetricsService,
-    ){}
+        private readonly adWrite: AdWriteService,
+        config: ConfigService
+    ){
+        this.mode = readAdWriteMode(config);
+        console.log(`Ads are saved in ${this.mode} mode`);
+    }
+
     async postTelegramUserAd(adData: PostAdInterface, userId: bigint){
-        const postAdForDriver = async (adData: PostAdInterface, userId: bigint) => {
-            if(
-                adData.vehicleId === undefined || adData.vehicleId === null || 
-                adData.allowLuggage === undefined || adData.allowLuggage === null || 
-                adData.calculatedArrivalTime === undefined || adData.calculatedArrivalTime === null
-            ){
-                    return {
-                        success: false,
-                        code: 'INVALID_INPUT',
-                        message: "Make sure all input fields are valid"
-                    }
+        const timer = this.metrics.start(`AdService.postTelegramUserAd.mode=${this.mode}`);
+        try{
+            const ad: NewAd = { ...adData, userId };
+
+            if (this.mode === 'sync') {
+                const result = await this.adWrite.create(ad);
+                if (!result.success) return result;
+                return { success: true, queued: false, message: 'Ad posted', data: { id: String(result.adId) } };
             }
-            const timer = this.metrics.start('AdService.postTelegramUserAd.role=driver');
-            try{
-                adData.userId = userId;
-                const departureTime = tashkentToInstant(
-                    adData.date,
-                    adData.time,
-                );
 
-                let arrivalTime = tashkentToInstant(
-                    adData.date,
-                    adData.calculatedArrivalTime,
-                );
+            // async: check now so the user gets an answer right away, then let the worker save it
+            const problem = await this.adWrite.check(ad);
+            if (problem) return problem;
 
-                const departureDate = Temporal.PlainDate.from(adData.date)
-                    .toZonedDateTime({ timeZone: 'Asia/Tashkent', plainTime: '00:00' })
-                    .toInstant();
-
-                if (Temporal.Instant.compare(departureTime, Temporal.Now.instant()) <= 0) {
-                    // throw new BadRequestException("Departure time is already passed");
-                    return { success: false, code: 'AD_IN_PAST', message: 'Departure time is already passed' }
-                }
-
-                // if (Temporal.Instant.compare(arrivalTime, departureTime) <= 0) {
-                //     arrivalTime = arrivalTime.add({ hours: 24 });
-                // }
-
-                // console.log({
-                //     dep: departureDate.constructor.name,
-                //     depTime: departureTime.constructor.name,
-                //     arr: arrivalTime.constructor.name,
-                //     sameClass: departureDate instanceof Temporal.Instant,
-                // });
-
-                // console.log(JSON.stringify(adData));
-
-                const t1 = this.metrics.start('AdService.overlapCheck.role=driver');
-                const existingAd = await db.orm.public.Ads
-                    .where({ userId: BigInt(adData.userId), departureDate })   // equality only
-                    .where((ad) => ad.departureTime.lt(arrivalTime))
-                    .where((ad) => ad.arrivalTime.gt(departureTime))
-                    .first();
-                t1.end();
-                
-                if (existingAd) {
-                    // console.log('User already has an ad for the same time range:', existingAd);
-                    return { success: false, code: 'AD_DUPLICATE', message: "User already has an ad for the same time range" };
-                }
-
-                const t2 = this.metrics.start('AdService.vehicleCheck');
-                try{
-                    const vehicle = await db.orm.public.Vehicles
-                        .where({ 
-                            id: BigInt(adData.vehicleId), 
-                            userId: BigInt(adData.userId), 
-                            deletedAt: null
-                        })
-                        .first();
-
-                    if(!vehicle){
-                        return {
-                            success: false,
-                            code: 'VEHICLE_NOT_FOUND',
-                            message: 'Vehicle not found'
-                        }
-                    }
-                }catch(err: unknown){
-                    console.error("Error in AdService.vehicleCheck: ", err);
-                    return { success: false, message: "Something went wrong" }
-                }finally{
-                    t2.end();
-                }
-    
-                const t3 = this.metrics.start('AdService.publish.role=driver');
-                await this.rabbitMQ.publish(
-                    'ads',
-                    {
-                        type: 'POST_AD',
-                        data: adData
-                    }
-                )
-                t3.end();
-
-                return { success: true, message: "Ad posted successfully" };
-            }catch(err: any){
-                console.error("Error in AdService.postTelegramUserAd:", err);
-                return { success: false, error: err.message };
-            }finally{
-                timer.end();
-            }
-        }
-
-        const postAdForPassenger = async (adData: PostAdInterface, userId: bigint) => {
-            const timer = this.metrics.start('AdService.postTelegramUserAd.role=passenger');
-            try{
-                adData.userId = userId;
-                const departureTime = tashkentToInstant(
-                    adData.date,
-                    adData.time,
-                );
-
-                const departureDate = Temporal.PlainDate.from(adData.date)
-                    .toZonedDateTime({ timeZone: 'Asia/Tashkent', plainTime: '00:00' })
-                    .toInstant();
-
-                const t1 = this.metrics.start('AdService.overlapCheck.role=passenger');
-                const windowStart = departureTime.subtract({ hours: 1 });
-                const windowEnd   = departureTime.add({ hours: 1 });
-
-                const tooClose = await db.orm.public.Ads
-                    .where({ userId: BigInt(adData.userId), departureDate })
-                    .where((ad) => ad.departureTime.gt(windowStart))
-                    .where((ad) => ad.departureTime.lt(windowEnd))
-                    .first();
-                t1.end();
-
-                if(tooClose){
-                    return { success: false, code: 'AD_TOO_CLOSE', message: "User already has an ad for the time less than an hour" };
-                }
-
-                const t2 = this.metrics.start('AdService.publish.role=passenger');
-                await this.rabbitMQ.publish(
-                    'ads',
-                    {
-                        type: 'POST_AD',
-                        data: adData
-                    }
-                );
-                t2.end();
-
-                return { success: true, message: "Ad posted successfully" };
-            }catch(err: any){
-                console.error("Error in AdService.postTelegramUserAd:", err);
-                return { success: false, error: err.message };
-            }finally{
-                timer.end();
-            }
-        }
-
-        switch(adData.role){
-            case "driver":
-                return await postAdForDriver(adData, userId);
-            case "passenger":
-                return await postAdForPassenger(adData, userId);
+            await this.rabbitMQ.publish('ads', { type: 'POST_AD', data: ad });
+            return { success: true, queued: true, message: 'Ad queued' };
+        }catch(err: unknown){
+            console.error('Error in AdService.postTelegramUserAd:', err);
+            return { success: false, message: 'Something went wrong' };
+        }finally{
+            timer.end();
         }
     }
 
@@ -428,30 +304,21 @@ export class AdService {
     }
 
     async updateTelegramUserAdById(userId: bigint, adId: bigint, updateAdData: UpdateAdInterface){
-        const timer = this.metrics.start('AdService.updateTelegramUserAdById');
+        const timer = this.metrics.start(`AdService.updateTelegramUserAdById.mode=${this.mode}`);
         try{
             if(updateAdData.price < 0){
-                return {
-                    success: false as const,
-                    error: "VALIDATION_ERROR"
-                };
+                return { success: false as const, error: "VALIDATION_ERROR" };
             }
 
-            updateAdData.id = adId;
-            updateAdData.userId = userId;
-
-            await this.rabbitMQ.publish(
-                'ads',
-                {
-                    type: 'UPDATE_AD',
-                    data: updateAdData
-                }
-            );
-
-            return {
-                success: true as const,
-                message: "Update ad job is queued"
+            if (this.mode === 'sync') {
+                return await this.adWrite.update(userId, adId, updateAdData);
             }
+
+            await this.rabbitMQ.publish('ads', {
+                type: 'UPDATE_AD',
+                data: { ...updateAdData, id: adId, userId },
+            });
+            return { success: true as const, queued: true, message: "Update ad job is queued" };
         }catch(err: unknown){
             console.error('Error in updateTelegramUserAdById', err);
             return { success: false as const, error: err instanceof Error ? err.message : String(err) };
@@ -461,19 +328,17 @@ export class AdService {
     }
 
     async deleteTelegramUserAdById(userId: bigint, adId: bigint){
-        const timer = this.metrics.start("AdService.deleteTelegramUserAdById");
+        const timer = this.metrics.start(`AdService.deleteTelegramUserAdById.mode=${this.mode}`);
         try{
-            const deleteAdDate = { id: adId, userId }
+            if (this.mode === 'sync') {
+                return await this.adWrite.cancel(userId, adId);
+            }
 
             await this.rabbitMQ.publish('ads', {
                 type: "DELETE_AD",
-                data: deleteAdDate
+                data: { id: adId, userId },
             });
-
-            return {
-                success: true as const,
-                message: "Delete ad job is queued"
-            }
+            return { success: true as const, queued: true, message: "Delete ad job is queued" };
         }catch(err: unknown){
             console.error("Error in deleteTelegramUserAdById", err);
             return { success: false as const, error: err instanceof Error ? err.message : String(err) };
