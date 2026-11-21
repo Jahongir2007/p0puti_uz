@@ -36,9 +36,11 @@ export async function getTelegramUserVehicles() {
         //     String(error)
         // );
 
-        console.error("REQUEST ERROR:", error);
-        console.error("Response:", error.response);
-        console.error("Request:", error.request);
+        // console.error("REQUEST ERROR:", error);
+        // console.error("Response:", error.response);
+        // console.error("Request:", error.request);
+
+        throw error;
     }
 }
 
