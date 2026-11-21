@@ -1,20 +1,10 @@
 import axios from "axios";
 import { useAuthStore } from "../stores/auth.store";
-import i18n from "../i18n";
+import { useSessionStore } from "../stores/session.store";
 
-const tg = window.Telegram?.WebApp;
-let sessionExpiredShown = false;
-
+// Opens <SessionExpiredModal />. Safe to call many times: it's one flag.
 function showSessionExpired(){
-  if(sessionExpiredShown) return;
-  sessionExpiredShown = true;
-
-  const message = i18n.t("sessionExpired");
-  if(tg?.isVersionAtLeast?.("6.2")){
-    tg.showAlert(message, () => tg.close());
-  }else{
-    window.alert(message);
-  }
+  useSessionStore.getState().markExpired();
 }
 
 const api = axios.create({

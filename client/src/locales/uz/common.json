@@ -5,5 +5,9 @@
     "create": "E’lon",
     "profile": "Profil"
   },
-  "sessionExpired": "Sessiya muddati tugadi. Iltimos, ilovani qayta oching."
+  "sessionExpired": {
+    "title": "Sessiya muddati tugadi",
+    "message": "Xavfsizlik maqsadida sessiyangiz yakunlandi. Davom etish uchun ilovani yopib, qayta oching.",
+    "close": "Ilovani yopish"
+  }
 }

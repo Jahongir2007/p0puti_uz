@@ -7,6 +7,7 @@ import Navbar from "./components/navbar.component";
 import { AuthGate } from "./components/authGate.component";
 import AdPage from "./pages/ad.page";
 import UserAdsPage from "./pages/userAds.page";
+import { SessionExpiredModal } from "./components/sessionExpiredModal.component";
 
 function App() {
     const [activeSection, setActiveSection] = useState("home");
@@ -19,6 +20,7 @@ function App() {
       setAdId(id);
     }, []);
      return (
+      <>
       <AuthGate>
         <div>
           {activeSection === "home" && <Home onNavigate={navigate} />}
@@ -37,6 +39,10 @@ function App() {
           )}
         </div>
       </AuthGate>
+
+      {/* Outside AuthGate so it covers every page, navbar included */}
+      <SessionExpiredModal />
+      </>
     );
 }
 
