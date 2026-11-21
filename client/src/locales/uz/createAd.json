@@ -63,7 +63,36 @@
     "pending": "Joylashtirilmoqda..."
   },
   "result": {
-    "success": "E’lon muvaffaqiyatli joylashtirildi!",
-    "error": "E’lon yaratishda xatolik yuz berdi!"
+    "ok": "Tushunarli",
+    "success": {
+      "title": "E’loningiz qabul qilindi",
+      "message": "Joylashtirilgach, Telegram orqali xabar beramiz."
+    },
+    "error": {
+      "title": "E’lon joylanmadi",
+      "message": "Nimadir xato ketdi. Birozdan so‘ng qayta urinib ko‘ring."
+    },
+    "errors": {
+      "VEHICLE_NOT_FOUND": {
+        "title": "Avtomobil topilmadi",
+        "message": "Tanlangan avtomobil profilingizda yo‘q. Boshqasini tanlang yoki profilga yangi avtomobil qo‘shing."
+      },
+      "AD_DUPLICATE": {
+        "title": "Bu vaqtda e’loningiz bor",
+        "message": "Shu vaqtga sizda allaqachon e’lon bor. Boshqa vaqtni tanlang."
+      },
+      "AD_TOO_CLOSE": {
+        "title": "Vaqt juda yaqin",
+        "message": "Sizda shu vaqtdan 1 soat ichida boshqa e’lon bor. Boshqa vaqtni tanlang."
+      },
+      "AD_IN_PAST": {
+        "title": "Bu vaqt o‘tib ketgan",
+        "message": "O‘tib ketgan kun yoki vaqt uchun e’lon yaratib bo‘lmaydi. Keyingi vaqtni tanlang."
+      },
+      "INVALID_INPUT": {
+        "title": "Ma’lumotlarni tekshiring",
+        "message": "Barcha maydonlarni to‘g‘ri to‘ldiring va qayta urinib ko‘ring."
+      }
+    }
   }
 }

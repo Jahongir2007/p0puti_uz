@@ -2,30 +2,21 @@ import api from "./axios.api";
 import { useAuthStore } from "../stores/auth.store";
 
 export async function postTelegramUserAd(adData) {
-  try {
-    const accessToken = useAuthStore.getState().accessToken;
+  const accessToken = useAuthStore.getState().accessToken;
 
-    // alert(
-    //     `Base URL: ${api.defaults.baseURL}\n` +
-    //     `Path: /ad`
-    // );
+  const { data } = await api.post("/ad", adData, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
 
-    // const body = JSON.stringify(adData, null, 2);
-    // alert(body);
-
-    const response = await api.post("/ad", adData, {
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-        },
-    });
-
-    // alert(JSON.stringify(response.data, null, 2));
-
-    return response.data;
-  } catch (error) {
-    // alert(`CATCH ${JSON.stringify(error, null, 2)}`);
+  // The server answers 200 even when it refuses the ad: { success: false, code, message }.
+  // Throw so the page's onError runs instead of onSuccess.
+  if (!data.success) {
+    const error = new Error(data.message ?? data.error ?? "CREATE_AD_FAILED");
+    error.serverCode = data.code; // not `code`: axios errors already use that name
     throw error;
   }
+
+  return data;
 }
 
 export async function getLatestAds(cursor, limit) {
