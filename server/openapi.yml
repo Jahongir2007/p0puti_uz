@@ -16,8 +16,9 @@ info:
     - Prices are whole numbers in so'm.
     - Many endpoints answer `200`/`201` with `{ "success": false, ... }` instead of an HTTP error.
       Always check `success`. Every `POST` returns `201`, even when `success` is `false`.
-    - Creating, updating and deleting ads is **asynchronous**: the API queues a job and a worker
-      applies it. The final result is sent to the user as a Telegram message.
+    - Creating, updating and deleting ads depends on the server's `AD_WRITE_MODE`:
+      `sync` saves right away and answers with the real result; `async` queues a job, a worker
+      applies it and the bot messages the user. Responses say which with `queued`.
 servers:
   - url: http://localhost:3000/api
     description: Local development
@@ -226,12 +227,12 @@ paths:
     post:
       summary: Post a ride (driver) or a ride request (passenger)
       description: |
-        Checks the request, then queues the ad. A worker saves it and the user gets a Telegram message:
+        Checks the ad: required driver fields, a future departure, that `vehicleId` is one of the
+        user's vehicles, and no overlap with the user's other active ads.
+        `sync` mode saves it and returns its `id`; `async` mode queues it and the bot later says
         "posted", "duplicate", "too close to another ad" or "in the past".
 
         Drivers must also send `vehicleId`, `allowLuggage` and `calculatedArrivalTime`.
-
-        Known issue: `vehicleId` is not yet checked to belong to the user (fix in progress).
       tags: [Ads]
       requestBody:
         required: true
@@ -274,22 +275,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/PostAdResult'
               examples:
-                queued:
+                postedSync:
                   value:
                     success: true
-                    message: Ad posted successfully
-                missingDriverFields:
+                    queued: false
+                    message: Ad posted
+                    data:
+                      id: '42'
+                queuedAsync:
+                  value:
+                    success: true
+                    queued: true
+                    message: Ad queued
+                vehicleNotOwned:
                   value:
                     success: false
-                    message: Make sure all input fields are valid
+                    code: VEHICLE_NOT_FOUND
+                    message: Vehicle not found
                 duplicate:
                   value:
                     success: false
+                    code: AD_DUPLICATE
                     message: User already has an ad for the same time range
-                inThePast:
-                  value:
-                    success: false
-                    error: Departure time is already passed
         '400':
           $ref: '#/components/responses/ValidationFailed'
         '401':
@@ -469,8 +476,9 @@ paths:
     patch:
       summary: Update my ad
       description: |
-        Queues the change. The worker applies it only if the ad belongs to the user,
-        is still `ACTIVE` and has not departed; otherwise it is silently skipped.
+        Only the user's own `ACTIVE` ads that have not departed can change.
+        `sync`: answers `{ success: true }` or `success: false` with `AD_NOT_FOUND` / `AD_DEPARTED`.
+        `async`: answers `queued: true`; the worker skips the change if a rule fails.
       tags: [Ads]
       requestBody:
         required: true
@@ -480,11 +488,12 @@ paths:
               $ref: '#/components/schemas/UpdateAdInput'
       responses:
         '200':
-          description: 'Queued, or `success: false` with `VALIDATION_ERROR` for a negative price.'
+          description: 'Done (`sync`), queued (`async`), or refused. A negative price gives `error: VALIDATION_ERROR`.'
           content:
             application/json:
               schema:
                 oneOf:
+                  - $ref: '#/components/schemas/WriteResult'
                   - $ref: '#/components/schemas/Queued'
                   - $ref: '#/components/schemas/Failure'
               example:
@@ -499,16 +508,19 @@ paths:
     delete:
       summary: Cancel my ad
       description: |
-        Queues the cancellation. The worker sets the status to `CANCELLED` only if the ad belongs
-        to the user and is still `ACTIVE`; otherwise it is silently skipped.
+        Sets the status to `CANCELLED` if the ad belongs to the user and is still `ACTIVE`.
+        `sync`: answers `{ success: true }` or `success: false` with `AD_NOT_FOUND`.
+        `async`: answers `queued: true`; the worker skips it if a rule fails.
       tags: [Ads]
       responses:
         '200':
-          description: Queued.
+          description: Done (`sync`), queued (`async`), or refused (`sync`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Queued'
+                oneOf:
+                  - $ref: '#/components/schemas/WriteResult'
+                  - $ref: '#/components/schemas/Queued'
               example:
                 success: true
                 message: Delete ad job is queued
@@ -750,17 +762,34 @@ components:
       properties:
         success:
           type: boolean
+        queued:
+          type: boolean
+          description: When `success` is `true`. `false` = saved now (`sync`), `true` = a worker will save it (`async`).
         message:
           type: string
-        error:
-          type: string
-          description: Set instead of `message` for unexpected errors and past departure times.
+        data:
+          type: object
+          description: '`sync` mode only: the new ad.'
+          properties:
+            id:
+              $ref: '#/components/schemas/Id'
         code:
           type: string
           enum: [VEHICLE_NOT_FOUND, AD_DUPLICATE, AD_TOO_CLOSE, AD_IN_PAST, INVALID_INPUT]
-          description: |
-            Planned, not sent yet. When `success` is `false`, a machine-readable reason.
-            The mini app already shows a translated message for each value.
+          description: When `success` is `false`, why. Missing for unexpected errors.
+
+    WriteResult:
+      type: object
+      required: [success]
+      description: '`sync` mode result of an update or cancel.'
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+          enum: [AD_NOT_FOUND, AD_DEPARTED]
+        message:
+          type: string
 
     UpdateAdInput:
       type: object
@@ -914,6 +943,9 @@ components:
       required: [success, message]
       properties:
         success:
+          type: boolean
+          enum: [true]
+        queued:
           type: boolean
           enum: [true]
         message:

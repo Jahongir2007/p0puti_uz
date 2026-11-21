@@ -106,7 +106,11 @@ export const deleteTelegramUserAd = async (adId) => {
   const { data } = await api.delete(`/ad/${adId}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!data.success) throw new Error(data?.error ?? "DELETE_AD_FAILED");
+  if (!data.success) {
+    const error = new Error(data.message ?? data.error ?? "DELETE_AD_FAILED");
+    error.serverCode = data.code; // AD_NOT_FOUND, AD_DEPARTED (sync mode)
+    throw error;
+  }
   return data;
 };
 
@@ -115,6 +119,10 @@ export const updateTelegramUserAd = async (adId, payload) => {
   const { data } = await api.patch(`/ad/${adId}`, payload, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!data.success) throw new Error(data?.error ?? "UPDATE_AD_FAILED");
+  if (!data.success) {
+    const error = new Error(data.message ?? data.error ?? "UPDATE_AD_FAILED");
+    error.serverCode = data.code; // AD_NOT_FOUND, AD_DEPARTED (sync mode)
+    throw error;
+  }
   return data;
 };

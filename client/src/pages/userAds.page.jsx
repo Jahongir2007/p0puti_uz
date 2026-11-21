@@ -2,9 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  CircleX,
+  History,
   Minus,
   Pencil,
   Plus,
+  SearchX,
   Trash2,
   Users,
   Wallet,
@@ -14,15 +17,25 @@ import { useUserAds, useDeleteUserAd, useUpdateUserAd } from "../queries/userAds
 import { useInfiniteScroll } from "../hooks/useInfiniteScroll.hook";
 import { formatDeparture } from "../utils/helpers";
 import { localizedName } from "../utils/locations";
-import { showAlert, showConfirm } from "../utils/telegram";
+import { showConfirm } from "../utils/telegram";
+import { BottomSheet } from "../components/bottomSheet.component";
 
 const tg = window.Telegram?.WebApp;
+
+// Error sheet for a failed edit or delete. Texts: <key>.title / .message in userAds.json
+const ERROR_SHEETS = {
+  AD_NOT_FOUND: { tone: "warning", icon: SearchX, key: "errors.AD_NOT_FOUND" },
+  AD_DEPARTED: { tone: "warning", icon: History, key: "errors.AD_DEPARTED" },
+};
+const errorSheet = (error, fallbackKey) =>
+  ERROR_SHEETS[error.serverCode] ?? { tone: "error", icon: CircleX, key: fallbackKey };
 
 function UserAdCard({ ad, onOpen }) {
   const { t, i18n } = useTranslation("userAds");
   const lang = i18n.language;
 
   const [isEditing, setIsEditing] = useState(false);
+  const [sheet, setSheet] = useState(null); // error sheet while open
   const [form, setForm] = useState({
     price: ad.price ?? "",
     seats: ad.seats ?? 1,
@@ -44,8 +57,8 @@ function UserAdCard({ ad, onOpen }) {
     if (!(await showConfirm(t("deleteConfirm")))) return;
     deleteAd.mutate(ad.id, {
       onError: (error) => {
-        if(error.sessionExpired) return;
-        showAlert(t("deleteFailed"))
+        if (error.sessionExpired) return;
+        setSheet(errorSheet(error, "deleteFailed"));
       },
     });
   };
@@ -70,8 +83,8 @@ function UserAdCard({ ad, onOpen }) {
       {
         onSuccess: () => setIsEditing(false),
         onError: (error) => {
-          if(error.sessionExpired) return;
-          showAlert(t("updateFailed"))
+          if (error.sessionExpired) return;
+          setSheet(errorSheet(error, "updateFailed"));
         },
       }
     );
@@ -207,6 +220,17 @@ function UserAdCard({ ad, onOpen }) {
             </button>
           </div>
         </div>
+      )}
+
+      {sheet && (
+        <BottomSheet
+          tone={sheet.tone}
+          icon={sheet.icon}
+          title={t(`${sheet.key}.title`)}
+          message={t(`${sheet.key}.message`)}
+          actionLabel={t("ok")}
+          onClose={() => setSheet(null)}
+        />
       )}
     </div>
   );

@@ -1,6 +1,5 @@
 import {
   ArrowRight,
-  Bell,
   CarFront,
   ChevronRight,
   MapPin,
@@ -157,14 +156,6 @@ function HomePage({ onNavigate }) {
             <h1 className="mt-0.5 text-2xl font-bold tracking-tight">{t("title")}</h1>
           </div>
 
-          <button
-            type="button"
-            aria-label={t("notifications")}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-100"
-          >
-            <Bell className="h-5 w-5 text-slate-700" />
-            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-sky-500 ring-2 ring-white" />
-          </button>
         </header>
 
         {/* Hero */}

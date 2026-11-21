@@ -29,7 +29,8 @@ import { BottomSheet } from "../components/bottomSheet.component";
 
 // How each outcome is shown. Texts: result.<key>.title / .message in createAd.json
 const RESULTS = {
-  success: { tone: "success", icon: CircleCheck, key: "success" },
+  posted: { tone: "success", icon: CircleCheck, key: "posted" }, // saved right away (sync mode)
+  success: { tone: "success", icon: CircleCheck, key: "success" }, // queued, the bot confirms (async mode)
   VEHICLE_NOT_FOUND: { tone: "error", icon: CarFront, key: "errors.VEHICLE_NOT_FOUND" },
   AD_DUPLICATE: { tone: "warning", icon: CalendarClock, key: "errors.AD_DUPLICATE" },
   AD_TOO_CLOSE: { tone: "warning", icon: Clock, key: "errors.AD_TOO_CLOSE" },
@@ -158,7 +159,7 @@ function CreateAdPage() {
     };
 
     createAdMutation(adData, {
-      onSuccess: () => setResult(RESULTS.success),
+      onSuccess: (data) => setResult(data.queued === false ? RESULTS.posted : RESULTS.success),
       onError: (error) => {
         if (error.sessionExpired) return; // the session popup is already showing
         console.error("Failed to create ad:", error);

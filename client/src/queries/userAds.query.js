@@ -43,6 +43,10 @@ export function useDeleteUserAd() {
       );
       queryClient.invalidateQueries({ queryKey: ["latestAds"] });
     },
+    onError: (error) => {
+      // The ad was cancelled, expired or departed meanwhile: show the real list
+      if (error.serverCode) queryClient.invalidateQueries({ queryKey: ["userAds"] });
+    }
   });
 }
 
@@ -60,5 +64,9 @@ export function useUpdateUserAd() {
       queryClient.invalidateQueries({ queryKey: ["latestAds"] });
       queryClient.invalidateQueries({ queryKey: ["ad"] }); // use the key your useAd hook uses
     },
+    onError: (error) => {
+      // The ad was cancelled, expired or departed meanwhile: show the real list
+      if (error.serverCode) queryClient.invalidateQueries({ queryKey: ["userAds"] });
+    }
   });
 }
