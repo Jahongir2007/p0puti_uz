@@ -12,6 +12,7 @@ import { RabbitMQModule } from '../infrastructure/rabbitmq/rabbitmq.module.js';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1d' }
       }),
     }),
     RabbitMQModule
