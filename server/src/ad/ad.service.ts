@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PostAdInterface } from './interface/postAd.interface.js';
 import { RabbitMQService } from '../infrastructure/rabbitmq/rabbitmq.service.js';
 import { MetricsService } from '../infrastructure/metrics/metrics.service.js';
@@ -26,6 +26,7 @@ export class AdService {
             ){
                     return {
                         success: false,
+                        code: 'INVALID_INPUT',
                         message: "Make sure all input fields are valid"
                     }
             }
@@ -47,7 +48,8 @@ export class AdService {
                     .toInstant();
 
                 if (Temporal.Instant.compare(departureTime, Temporal.Now.instant()) <= 0) {
-                    throw new BadRequestException("Departure time is already passed");
+                    // throw new BadRequestException("Departure time is already passed");
+                    return { success: false, code: 'AD_IN_PAST', message: 'Departure time is already passed' }
                 }
 
                 // if (Temporal.Instant.compare(arrivalTime, departureTime) <= 0) {
@@ -73,9 +75,34 @@ export class AdService {
                 
                 if (existingAd) {
                     // console.log('User already has an ad for the same time range:', existingAd);
-                    return { success: false, message: "User already has an ad for the same time range" };
+                    return { success: false, code: 'AD_DUPLICATE', message: "User already has an ad for the same time range" };
                 }
-                const t2 = this.metrics.start('AdService.publish.role=driver');
+
+                const t2 = this.metrics.start('AdService.vehicleCheck');
+                try{
+                    const vehicle = await db.orm.public.Vehicles
+                        .where({ 
+                            id: BigInt(adData.vehicleId), 
+                            userId: BigInt(adData.userId), 
+                            deletedAt: null
+                        })
+                        .first();
+
+                    if(!vehicle){
+                        return {
+                            success: false,
+                            code: 'VEHICLE_NOT_FOUND',
+                            message: 'Vehicle not found'
+                        }
+                    }
+                }catch(err: unknown){
+                    console.error("Error in AdService.vehicleCheck: ", err);
+                    return { success: false, message: "Something went wrong" }
+                }finally{
+                    t2.end();
+                }
+    
+                const t3 = this.metrics.start('AdService.publish.role=driver');
                 await this.rabbitMQ.publish(
                     'ads',
                     {
@@ -83,7 +110,7 @@ export class AdService {
                         data: adData
                     }
                 )
-                t2.end();
+                t3.end();
 
                 return { success: true, message: "Ad posted successfully" };
             }catch(err: any){
@@ -119,7 +146,7 @@ export class AdService {
                 t1.end();
 
                 if(tooClose){
-                    return { success: false, message: "User already has an ad for the time less than an hour" };
+                    return { success: false, code: 'AD_TOO_CLOSE', message: "User already has an ad for the time less than an hour" };
                 }
 
                 const t2 = this.metrics.start('AdService.publish.role=passenger');

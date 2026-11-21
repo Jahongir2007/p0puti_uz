@@ -71,6 +71,15 @@ export class AdWorker implements OnModuleInit {
         //     sameClass: departureDate instanceof Temporal.Instant,
         // });
 
+        const vehicle = await db.orm.public.Vehicles
+            .where({ id: BigInt(job.data.vehicleId), userId: BigInt(job.data.userId), deletedAt: null})
+            .first();
+
+        if(!vehicle){
+            console.warn(`POST_AD: vehicle ${job.data.vehicleId} is not an active vehicle of user ${job.data.userId}`);
+            return;
+        }
+
         if (Temporal.Instant.compare(departureTime, Temporal.Now.instant()) <= 0) {
             // throw new BadRequestException("Departure time is already passed");
             await this.rabbitMQ.publish('telegram_events', {
