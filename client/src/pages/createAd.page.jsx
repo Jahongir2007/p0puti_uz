@@ -2,8 +2,13 @@ import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Calendar as CalendarIcon,
+  CalendarClock,
   CarFront,
+  CircleCheck,
+  CircleX,
   Clock,
+  History,
+  TriangleAlert,
   Loader2,
   Minus,
   Plus,
@@ -20,13 +25,23 @@ import { getTelegramUserVehicles } from "../api/vehicle.api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { postTelegramUserAd } from "../api/ad.api";
 import { CityInput } from "../components/cityInput.component";
-import { showAlert } from "../utils/telegram";
+import { BottomSheet } from "../components/bottomSheet.component";
 
-// Text for a failed post: the server's error code if we have a text for it
-// (result.errors.<CODE>), otherwise the generic message.
-function createAdErrorKeys(error) {
+// How each outcome is shown. Texts: result.<key>.title / .message in createAd.json
+const RESULTS = {
+  success: { tone: "success", icon: CircleCheck, key: "success" },
+  VEHICLE_NOT_FOUND: { tone: "error", icon: CarFront, key: "errors.VEHICLE_NOT_FOUND" },
+  AD_DUPLICATE: { tone: "warning", icon: CalendarClock, key: "errors.AD_DUPLICATE" },
+  AD_TOO_CLOSE: { tone: "warning", icon: Clock, key: "errors.AD_TOO_CLOSE" },
+  AD_IN_PAST: { tone: "warning", icon: History, key: "errors.AD_IN_PAST" },
+  INVALID_INPUT: { tone: "warning", icon: TriangleAlert, key: "errors.INVALID_INPUT" },
+  unknown: { tone: "error", icon: CircleX, key: "error" },
+};
+
+// The server's error code if we have a text for it; a 400 means the form failed validation
+function resultForError(error) {
   const code = error.serverCode ?? (error.response?.status === 400 ? "INVALID_INPUT" : null);
-  return code ? [`result.errors.${code}`, "result.error"] : ["result.error"];
+  return RESULTS[code] ?? RESULTS.unknown;
 }
 
 // Today's date in Tashkent as YYYY-MM-DD.
@@ -57,6 +72,7 @@ function CreateAdPage() {
 
   const [allowGroupJoin, setAllowGroupJoin] = useState(true);
   const [allowLuggage, setAllowLuggage] = useState(true);
+  const [result, setResult] = useState(null); // one of RESULTS while its popup is open
 
   const incrementSeats = () => seats < 8 && setSeats((prev) => prev + 1);
   const decrementSeats = () => seats > 1 && setSeats((prev) => prev - 1);
@@ -142,13 +158,11 @@ function CreateAdPage() {
     };
 
     createAdMutation(adData, {
-      onSuccess: () => {
-        showAlert(t("result.success"));
-      },
+      onSuccess: () => setResult(RESULTS.success),
       onError: (error) => {
-        if (error.sessionExpired) return;
+        if (error.sessionExpired) return; // the session popup is already showing
         console.error("Failed to create ad:", error);
-        showAlert(t(createAdErrorKeys(error)));
+        setResult(resultForError(error));
       },
     });
   };
@@ -498,6 +512,17 @@ function CreateAdPage() {
           </div>
         </form>
       </div>
+
+      {result && (
+        <BottomSheet
+          tone={result.tone}
+          icon={result.icon}
+          title={t(`result.${result.key}.title`)}
+          message={t(`result.${result.key}.message`)}
+          actionLabel={t("result.ok")}
+          onClose={() => setResult(null)}
+        />
+      )}
     </main>
   );
 }
