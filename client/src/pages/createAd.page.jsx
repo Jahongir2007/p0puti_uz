@@ -20,6 +20,14 @@ import { getTelegramUserVehicles } from "../api/vehicle.api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { postTelegramUserAd } from "../api/ad.api";
 import { CityInput } from "../components/cityInput.component";
+import { showAlert } from "../utils/telegram";
+
+// Text for a failed post: the server's error code if we have a text for it
+// (result.errors.<CODE>), otherwise the generic message.
+function createAdErrorKeys(error) {
+  const code = error.serverCode ?? (error.response?.status === 400 ? "INVALID_INPUT" : null);
+  return code ? [`result.errors.${code}`, "result.error"] : ["result.error"];
+}
 
 // Today's date in Tashkent as YYYY-MM-DD.
 // toISOString() uses UTC, which is still "yesterday" before 05:00 Tashkent time.
@@ -134,14 +142,13 @@ function CreateAdPage() {
     };
 
     createAdMutation(adData, {
-      onSuccess: (data) => {
-        console.log("Ad created:", data);
-        alert(t("result.success"));
+      onSuccess: () => {
+        showAlert(t("result.success"));
       },
       onError: (error) => {
-        if(error.sessionExpired) return;
+        if (error.sessionExpired) return;
         console.error("Failed to create ad:", error);
-        alert(t("result.error"));
+        showAlert(t(createAdErrorKeys(error)));
       },
     });
   };
