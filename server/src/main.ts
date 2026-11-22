@@ -1,15 +1,20 @@
-import 'dotenv/config';
+import './config/check-env.js';
 import { NestFactory } from '@nestjs/core';
 import { AppModule, ObserveInstrument } from './app.module.js';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { parseOrigins } from './config/env.validation.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     instrument: ObserveInstrument,
   });
+  const config = app.get(ConfigService);
   app.enableCors({
-    origin: true,
-    credentials: true,
+    origin: parseOrigins(config.getOrThrow<string>('ALLOWED_ORIGINS')),
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400, // browsers may cache the preflight answer for a day
   });
 
   app.setGlobalPrefix("api");
@@ -30,7 +35,7 @@ async function bootstrap() {
 
   console.log("1️⃣ Before listen");
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(config.getOrThrow<number>('PORT'));
 
   console.log("2️⃣ After listen");
   console.log("3️⃣ URL:", await app.getUrl());

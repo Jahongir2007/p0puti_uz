@@ -10,13 +10,15 @@ import { AdModule } from './ad/ad.module.js';
 import { RabbitMQModule } from './infrastructure/rabbitmq/rabbitmq.module.js';
 import { MetricsModule } from './infrastructure/metrics/metrics.module.js';
 import { DbWarmup } from './infrastructure/database/db.warmup.js';
+import { validateEnv } from './config/env.validation.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true
+      isGlobal: true,
+      validate: validateEnv
     }),
     AuthModule,
     UserModule,

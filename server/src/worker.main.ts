@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './config/check-env.js';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SchedulerRegistry } from '@nestjs/schedule';
