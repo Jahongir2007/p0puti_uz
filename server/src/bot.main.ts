@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import 'dotenv/config';
+import './config/check-env.js';
 import { BotModule } from './bot.module.js';
 
 async function bootstrap() {
