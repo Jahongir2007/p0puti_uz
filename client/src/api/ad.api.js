@@ -67,7 +67,7 @@ export const searchAds = async ({ from, to, date, passengers, type, cursor, limi
   try {
     const accessToken = useAuthStore.getState().accessToken;
     const { data } = await api.get("/ad/search", {
-      params: { from, to, date, passengers, type, cursor, limit },
+      params: { from, to, date, passenger: passengers, type, cursor, limit }, // the server reads `passenger`
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!data.success) throw new Error(data.error ?? "Qidiruvda xatolik");
