@@ -14,6 +14,9 @@ import './index.css'
 import App from './App.jsx'
 import "./i18n";
 
+// Tab title from VITE_APP_NAME; index.html has a fallback
+if (import.meta.env.VITE_APP_NAME) document.title = import.meta.env.VITE_APP_NAME;
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { 

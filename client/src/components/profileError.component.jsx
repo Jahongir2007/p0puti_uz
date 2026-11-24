@@ -2,14 +2,14 @@ import React from "react";
 import { AlertCircle, RefreshCw, MessageSquare, ArrowLeft } from "lucide-react";
 
 export function ProfileError({ error, onRetry }) {
-  // Telegram orqali qo'llab-quvvatlash xizmatiga yo'naltirish (linkni loyihangizga moslang)
+  // Support account from VITE_SUPPORT_USERNAME (without @). No account set → no button.
+  const supportUsername = import.meta.env.VITE_SUPPORT_USERNAME?.replace(/^@/, "").trim();
+
   const handleContactSupport = () => {
+    const url = `https://t.me/${supportUsername}`;
     const tg = window.Telegram?.WebApp;
-    if (tg && tg.openTelegramLink) {
-      tg.openTelegramLink("https://t.me/your_support_bot");
-    } else {
-      window.open("https://t.me/your_support_bot", "_blank");
-    }
+    if (tg?.openTelegramLink) tg.openTelegramLink(url);
+    else window.open(url, "_blank");
   };
 
   return (
@@ -59,14 +59,16 @@ export function ProfileError({ error, onRetry }) {
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={handleContactSupport}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-100 text-xs font-bold text-slate-700 transition active:scale-[0.98] hover:bg-slate-200/80"
-              >
-                <MessageSquare className="h-4 w-4" />
-                Qo'llab-quvvatlash xizmati
-              </button>
+              {supportUsername && (
+                <button
+                  type="button"
+                  onClick={handleContactSupport}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-100 text-xs font-bold text-slate-700 transition active:scale-[0.98] hover:bg-slate-200/80"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Qo'llab-quvvatlash xizmati
+                </button>
+              )}
             </div>
           </div>
         </section>
