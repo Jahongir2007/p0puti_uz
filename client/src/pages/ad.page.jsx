@@ -320,18 +320,23 @@ function AdDetails({ ad, related, onNavigate }) {
             value={price ?? t("info.negotiable")}
             tone="amber"
           />
-          <InfoTile
-            icon={Briefcase}
-            label={t("info.luggage")}
-            value={ad.luggageAllowed ? t("info.luggageYes") : t("info.luggageNo")}
-            tone={ad.luggageAllowed ? "sky" : "rose"}
-          />
-          <InfoTile
-            icon={Flag}
-            label={t("info.arrival")}
-            value={arrival ? arrival.time : t("info.notSpecified")}
-            tone="slate"
-          />
+          {/* Luggage and arrival only exist on driver ads: passengers never set them */}
+          {isDriver && (
+            <>
+              <InfoTile
+                icon={Briefcase}
+                label={t("info.luggage")}
+                value={ad.luggageAllowed ? t("info.luggageYes") : t("info.luggageNo")}
+                tone={ad.luggageAllowed ? "sky" : "rose"}
+              />
+              <InfoTile
+                icon={Flag}
+                label={t("info.arrival")}
+                value={arrival ? arrival.time : t("info.notSpecified")}
+                tone="slate"
+              />
+            </>
+          )}
         </div>
       </section>
 
