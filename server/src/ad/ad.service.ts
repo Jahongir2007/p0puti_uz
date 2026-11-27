@@ -66,6 +66,7 @@ export class AdService {
             }
 
             const ordered = await db.orm.public.Ads
+                .where({ status: 'ACTIVE' })
                 .where((ad) => ad.departureTime.gt(now))
                 .orderBy([
                     (ad) => ad.departureTime.asc(),
