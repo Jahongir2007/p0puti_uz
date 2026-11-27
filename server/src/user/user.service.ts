@@ -38,7 +38,7 @@ export class UserService {
             console.log('📤 Emitting user.created');
 
             try{
-                this.rabbitMQ.publish('telegram_events', {
+                await this.rabbitMQ.publish('telegram_events', {
                     type: 'USER_CREATED',
                     data: { telegramId: telegramUser.id.toString() }
                 } satisfies TelegramEventJob);
