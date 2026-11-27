@@ -65,7 +65,7 @@ export class AdController {
         @Query('limit') limit: number,
         @Query('type', new ParseEnumPipe(AdType, { optional: true })) type?: AdType
     ){
-        return await this.adService.searchAds(fromLocation, toLocation, date, passenger, cursor, limit);
+        return await this.adService.searchAds(fromLocation, toLocation, date, passenger, cursor, limit, type);
     }
 
     @UseGuards(AuthGuard)

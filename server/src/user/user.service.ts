@@ -37,10 +37,14 @@ export class UserService {
 
             console.log('📤 Emitting user.created');
 
-            this.rabbitMQ.publish('telegram_events', {
-                type: 'USER_CREATED',
-                data: { telegramId: telegramUser.id.toString() }
-            } satisfies TelegramEventJob);
+            try{
+                this.rabbitMQ.publish('telegram_events', {
+                    type: 'USER_CREATED',
+                    data: { telegramId: telegramUser.id.toString() }
+                } satisfies TelegramEventJob);
+            }catch(err: unknown){
+                console.error('Welcome message not queued:', err);
+            }
         }
 
         // console.log("Signing JWT token");
