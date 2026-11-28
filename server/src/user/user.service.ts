@@ -49,6 +49,17 @@ export class UserService {
 
         // console.log("Signing JWT token");
 
+        await this.rabbitMQ.publish('users', {
+            type: 'UPDATE_USER',
+            data: {
+                telegramId: telegramUser.id.toString(),
+                firstName: telegramUser.firstName,
+                lastName: telegramUser?.lastName,
+                username: telegramUser?.username,
+                photoUrl: telegramUser?.photoUrl
+            }
+        });
+
         const accessToken = this.jwtService.sign({
             sub: user.id,
             telegramId: telegramUser.id.toString(),

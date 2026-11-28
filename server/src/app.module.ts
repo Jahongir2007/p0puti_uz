@@ -11,6 +11,7 @@ import { RabbitMQModule } from './infrastructure/rabbitmq/rabbitmq.module.js';
 import { MetricsModule } from './infrastructure/metrics/metrics.module.js';
 import { DbWarmup } from './infrastructure/database/db.warmup.js';
 import { validateEnv } from './config/env.validation.js';
+import { UserWorkerModule } from './workers/user/user.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -26,6 +27,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     AdModule,
     RabbitMQModule,
     MetricsModule,
+    UserWorkerModule
   ],
   controllers: [AppController],
   providers: [AppService, DbWarmup],
