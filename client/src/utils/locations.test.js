@@ -44,6 +44,36 @@ describe("exactLocation and localizedName", () => {
   });
 
   it("shows free text exactly as it was saved", () => {
-    expect(localizedName("Toshkent", "ru")).toBe("Toshkent");
+    expect(localizedName("Qishloq 7", "ru")).toBe("Qishloq 7");
+  });
+});
+
+describe("Tashkent, the capital", () => {
+  it("is in the list, found by its Latin, Uzbek Cyrillic and Russian names", () => {
+    for (const typed of ["Toshkent", "toshkent", "Тошкент", "Ташкент"]) expect(exactLocation(typed)?.name).toBe("Toshkent");
+  });
+
+  it("is shown in the user's language", () => {
+    expect(localizedName("Toshkent", "ru")).toBe("Ташкент");
+    expect(localizedName("Toshkent", "uz-Cyrl")).toBe("Тошкент");
+    expect(localizedName("Toshkent", "uz")).toBe("Toshkent");
+  });
+
+  it("comes first when typing its beginning, before Toshkent tumani and other places", () => {
+    expect(searchLocations("tosh")[0].name).toBe("Toshkent");
+    expect(searchLocations("Ташк")[0].name).toBe("Toshkent");
+    expect(searchLocations("тошк")[0].name).toBe("Toshkent");
+  });
+});
+
+describe("cities before districts", () => {
+  it("offers the city first, then its district", () => {
+    expect(searchLocations("samarq").map((l) => l.name).slice(0, 2)).toEqual(["Samarqand", "Samarqand tumani"]);
+    expect(searchLocations("andij").map((l) => l.name).slice(0, 2)).toEqual(["Andijon", "Andijon tumani"]);
+  });
+
+  it("still finds districts", () => {
+    expect(searchLocations("toshkent t").map((l) => l.name)).toContain("Toshkent tumani");
+    expect(searchLocations("chilonzor")[0].name).toBe("Chilonzor tumani");
   });
 });
