@@ -1,0 +1,41 @@
+[
+  {
+    "id": "index.vehicles.vehicles_plate_number_active_6979c4d1",
+    "label": "Create index \"vehicles_plate_number_active_6979c4d1\" on \"vehicles\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "vehicles_plate_number_active_6979c4d1",
+        "table": "vehicles"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"vehicles_plate_number_active_6979c4d1\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"vehicles_plate_number_active_6979c4d1\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"vehicles_plate_number_active_6979c4d1\"",
+        "sql": "CREATE UNIQUE INDEX \"vehicles_plate_number_active_6979c4d1\" ON \"public\".\"vehicles\" (\"plate_number\") WHERE ((deleted_at IS NULL))",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"vehicles_plate_number_active_6979c4d1\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"vehicles_plate_number_active_6979c4d1\""
+        ]
+      }
+    ]
+  }
+]
