@@ -90,4 +90,12 @@ describe('AdService in both modes', () => {
     it('refuses to start with a wrong AD_WRITE_MODE', () => {
         expect(() => new AdService({} as any, fakeMetrics() as any, {} as any, { get: () => 'fast' } as any)).toThrow('AD_WRITE_MODE');
     });
+
+    it('refuses a search time that is not HH:MM, before reading the database', async () => {
+        const { service } = setup('sync');
+        for (const time of ['25:00', '9:00', '09:60', 'noon']) {
+            await expect(service.searchAds('A' as any, 'B' as any, '2026-12-05', 1, undefined, 10, undefined, time))
+                .resolves.toEqual({ success: false, error: 'Invalid time, expected HH:MM' });
+        }
+    });
 });

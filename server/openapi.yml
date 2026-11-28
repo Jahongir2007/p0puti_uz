@@ -334,6 +334,7 @@ paths:
       summary: Search active rides by route and day
       description: |
         Exact match on both city names. For today, rides that already left are skipped.
+        With `time`, only rides leaving at or after that time are returned.
         Results are ordered by ad ID.
 
         Known issue: `type` is accepted but not applied yet.
@@ -359,6 +360,16 @@ paths:
             type: string
             format: date
           example: '2026-11-24'
+        - name: time
+          in: query
+          description: |
+            Optional. Only rides leaving at or after this time (Tashkent time) on `date`.
+            Leave it out for the whole day. A wrong format answers
+            `{ success: false, error: "Invalid time, expected HH:MM" }`.
+          schema:
+            type: string
+            pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          example: '14:00'
         - name: passenger
           in: query
           description: Minimum free seats. Defaults to 1.
@@ -367,7 +378,7 @@ paths:
             minimum: 1
         - name: type
           in: query
-          description: Not applied yet (known issue). Must be one of the values if sent.
+          description: Only ads of this kind. Leave it out for both.
           schema:
             type: string
             enum: [DRIVER, PASSENGER]

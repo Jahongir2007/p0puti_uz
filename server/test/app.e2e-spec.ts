@@ -43,7 +43,7 @@ async function login(telegramId = newTelegramId()) {
     return { token, auth: { Authorization: `Bearer ${token}` }, userId: res.body.user.data.user.id as string };
 }
 
-async function addCar(auth: object) {
+async function addCar(auth: Record<string, string>) {
     const res = await http().post('/api/vehicle').set(auth).send({ brand: 'Chevrolet', model: 'Cobalt', color: 'oq', plateNumber: plate() }).expect(201);
     return res.body.id as string;
 }
@@ -275,6 +275,17 @@ describe('reading, updating and cancelling ads', () => {
         expect((await http().get(q + '&type=PASSENGER').set(auth)).body.data.map((a: any) => a.id)).not.toContain(id);
         expect((await http().get(q + '&passenger=3').set(auth)).body.data.map((a: any) => a.id)).toContain(id);
         expect((await http().get(q + '&passenger=4').set(auth)).body.data.map((a: any) => a.id)).not.toContain(id);
+    });
+
+    it('search can start from a time of day', async () => {
+        const { auth, id, day } = await userWithAd(); // leaves at 09:00
+        const q = `/api/ad/search?from=Toshkent&to=Samarqand&date=${day}&limit=50`;
+        const ids = async (time: string) => (await http().get(`${q}&time=${time}`).set(auth)).body.data.map((a: any) => a.id);
+        expect(await ids('08:00')).toContain(id);
+        expect(await ids('09:00')).toContain(id); // leaving exactly then counts
+        expect(await ids('09:01')).not.toContain(id);
+        expect(await ids('23:00')).not.toContain(id);
+        expect((await http().get(`${q}&time=25:00`).set(auth)).body).toEqual({ success: false, error: 'Invalid time, expected HH:MM' });
     });
 
     it('updates your own ad', async () => {

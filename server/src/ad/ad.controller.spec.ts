@@ -27,8 +27,8 @@ describe('AdController', () => {
 
     it('passes every search filter on, including type', async () => {
         const { ads, controller } = setup();
-        await controller.searchAds('Toshkent' as any, 'Samarqand' as any, '2026-12-05', 'c1', 2, 20, AdType.DRIVER);
-        expect(ads.searchAds).toHaveBeenCalledWith('Toshkent', 'Samarqand', '2026-12-05', 2, 'c1', 20, 'DRIVER');
+        await controller.searchAds('Toshkent' as any, 'Samarqand' as any, '2026-12-05', 'c1', 2, 20, AdType.DRIVER, '14:00');
+        expect(ads.searchAds).toHaveBeenCalledWith('Toshkent', 'Samarqand', '2026-12-05', 2, 'c1', 20, 'DRIVER', '14:00');
     });
 
     it('lists only the logged-in user\'s ads', async () => {

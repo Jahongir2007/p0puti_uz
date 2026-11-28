@@ -183,12 +183,16 @@ export class AdService {
         passengers: number = 1,
         cursor?: string,
         limit: number = 10,
-        type?: AdType
+        type?: AdType,
+        time?: string
     ) {
         const timer = this.metrics.start('AdService.searchAds');
         try {
             if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
                 return { success: false as const, error: 'Invalid date, expected YYYY-MM-DD' };
+            }
+            if (time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+                return { success: false as const, error: 'Invalid time, expected HH:MM' };
             }
             if (cursor && !/^\d+$/.test(cursor)) {
                 return { success: false as const, error: 'Invalid cursor' };
@@ -201,9 +205,10 @@ export class AdService {
             const dayStart = Temporal.Instant.from(`${date}T00:00:00+05:00`);
             const dayEnd = dayStart.add({ hours: 24 });
 
+            const start = time ? Temporal.Instant.from(`${date}T${time}:00+05:00`) : dayStart;
             // if searching today, don't show rides that already left
             const now = Temporal.Now.instant();
-            const from = Temporal.Instant.compare(now, dayStart) > 0 ? now : dayStart;
+            const from = Temporal.Instant.compare(now, start) > 0 ? now : start;
 
             let query = db.orm.public.Ads
                 .include('user', (u) =>
