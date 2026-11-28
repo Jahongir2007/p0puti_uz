@@ -17,5 +17,11 @@ export default defineConfig(({ mode }) => {
         env.VITE_CLOUDFLARED_URL,
       ],
     },
+
+    // `npm test`: components render in a fake browser (jsdom)
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./src/test/browser-apis.js', './src/test/setup.js'],
+    },
   }
 })
