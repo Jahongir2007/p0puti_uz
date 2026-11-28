@@ -12,6 +12,7 @@ import {
   Pencil,
   Trash2,
   Check,
+  CircleX,
   ClipboardList
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,7 +27,14 @@ import {
   deleteTelegramUserVehicle,
 } from "../api/vehicle.api";
 import { saveLanguage } from "../i18n";
-import { showAlert, showConfirm } from "../utils/telegram";
+import { showConfirm } from "../utils/telegram";
+import { BottomSheet } from "../components/bottomSheet.component";
+
+// Error sheet for a failed add/edit/delete. Texts: vehicle.<key>.title / .message in profile.json
+const vehicleErrorSheet = (error, fallbackKey) =>
+  error.serverCode === "PLATE_TAKEN"
+    ? { tone: "warning", icon: CarFront, key: "errors.PLATE_TAKEN" }
+    : { tone: "error", icon: CircleX, key: fallbackKey };
 
 const tg = window.Telegram?.WebApp;
 // const hasNativeDialogs = !!tg?.isVersionAtLeast?.("6.2");
@@ -239,6 +247,7 @@ function ProfilePage({ onNavigate }) {
   const { t, i18n } = useTranslation("profile");
   const queryClient = useQueryClient();
 
+  const [vehicleSheet, setVehicleSheet] = useState(null); // error sheet while open
   const [tgUser, setTgUser] = useState(null);
   const [isDriverMode, setIsDriverMode] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -301,7 +310,8 @@ function ProfilePage({ onNavigate }) {
     onError: (err) => {
       if(err.sessionExpired) return;
       console.error(err);
-      showAlert(t("vehicle.addFailed"));
+      if (err.sessionExpired) return;
+      setVehicleSheet(vehicleErrorSheet(err, "addFailed"));
     },
   });
 
@@ -315,7 +325,8 @@ function ProfilePage({ onNavigate }) {
     onError: (err) => {
       if(err.sessionExpired) return;
       console.error(err);
-      showAlert(t("vehicle.updateFailed"));
+      if (err.sessionExpired) return;
+      setVehicleSheet(vehicleErrorSheet(err, "updateFailed"));
     },
   });
 
@@ -325,7 +336,8 @@ function ProfilePage({ onNavigate }) {
     onError: (err) => {
       if(err.sessionExpired) return;
       console.error(err);
-      showAlert(t("vehicle.deleteFailed"));
+      if (err.sessionExpired) return;
+      setVehicleSheet(vehicleErrorSheet(err, "deleteFailed"));
     },
   });
 
@@ -625,6 +637,17 @@ function ProfilePage({ onNavigate }) {
           )}
         </section>
       </div>
+
+      {vehicleSheet && (
+        <BottomSheet
+          tone={vehicleSheet.tone}
+          icon={vehicleSheet.icon}
+          title={t(`vehicle.${vehicleSheet.key}.title`)}
+          message={t(`vehicle.${vehicleSheet.key}.message`)}
+          actionLabel={t("vehicle.ok")}
+          onClose={() => setVehicleSheet(null)}
+        />
+      )}
     </main>
   );
 }
