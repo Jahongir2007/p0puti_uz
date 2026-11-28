@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import CreateAdPage from "./createAd.page";
 import { useAuthStore } from "../stores/auth.store";
@@ -131,5 +131,127 @@ describe("Create ad page: passenger", () => {
     expect(ad).toMatchObject({ role: "passenger", allowGroupJoin: false, price: 150000 });
     expect(ad).not.toHaveProperty("vehicleId");
     expect(ad).not.toHaveProperty("allowLuggage");
+  });
+});
+
+describe("Create ad page: date, departure and arrival", () => {
+  // Saturday 28 November 2026, 10:20 in Tashkent
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-28T05:20:00Z"));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const tile = (label) => screen.getByRole("button", { name: new RegExp(`^${label}`) });
+  const finishAnimation = () => fireEvent.animationEnd(screen.getByRole("dialog"));
+  const closed = () => waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+  async function pickDate(name) {
+    fireEvent.click(tile("Jo‘nash kuni"));
+    fireEvent.click(await screen.findByRole("button", { name }));
+    finishAnimation();
+    await closed();
+  }
+  async function pickTime(tileLabel, h, m) {
+    fireEvent.click(tile(tileLabel));
+    fireEvent.click(await screen.findByRole("button", { name: `Soat ${h}` }));
+    fireEvent.click(screen.getByRole("button", { name: `${m} daqiqa` }));
+    fireEvent.click(screen.getByRole("button", { name: "Tayyor" }));
+    finishAnimation();
+    await closed();
+  }
+
+  it("starts today at the next full hour, arriving 2 hours later", async () => {
+    server();
+    renderWithApp(<CreateAdPage />);
+    await screen.findByPlaceholderText("Jo‘nash shahri");
+    expect(tile("Jo‘nash kuni").textContent).toContain("Bugun, 28-noy");
+    expect(tile("Jo‘nash vaqti").textContent).toContain("11:00");
+    expect(tile("Yetib borish vaqti").textContent).toContain("13:00");
+    expect(tile("Yetib borish vaqti").textContent).toContain("2 soat");
+  });
+
+  it("posts the chosen day, departure and arrival; the arrival follows a new departure", async () => {
+    const api = server();
+    renderWithApp(<CreateAdPage />);
+    await screen.findByPlaceholderText("Jo‘nash shahri");
+
+    await pickDate(/Ertaga/);
+    await pickTime("Yetib borish vaqti", "16", "30"); // 11:00 → 16:30: 5 h 30 min
+    expect(tile("Yetib borish vaqti").textContent).toContain("5 soat 30 daq");
+    await pickTime("Jo‘nash vaqti", "06", "15"); // the trip length stays
+    expect(tile("Yetib borish vaqti").textContent).toContain("11:45");
+
+    await fillAndSubmit();
+    await waitFor(() => expect(api.posted()).toHaveLength(1));
+    expect(api.posted()[0]).toMatchObject({
+      date: "2026-11-29",
+      time: "06:15",
+      calculatedArrivalTime: "11:45",
+      estimatedDurationHours: 5,
+      estimatedDurationMinutes: 30,
+    });
+  });
+
+  it("an arrival earlier than the departure is the next day", async () => {
+    const api = server();
+    renderWithApp(<CreateAdPage />);
+    await screen.findByPlaceholderText("Jo‘nash shahri");
+
+    await pickTime("Jo‘nash vaqti", "22", "00");
+    fireEvent.click(tile("Yetib borish vaqti"));
+    fireEvent.click(await screen.findByRole("button", { name: "Soat 01" }));
+    fireEvent.click(screen.getByRole("button", { name: "15 daqiqa" }));
+    expect(screen.getByText("Yo‘lda: 3 soat 15 daq · ertasi kuni")).toBeTruthy(); // live, inside the sheet
+    fireEvent.click(screen.getByRole("button", { name: "Tayyor" }));
+    finishAnimation();
+    await closed();
+    expect(tile("Yetib borish vaqti").textContent).toContain("01:15(Ertasi kuni)");
+
+    await fillAndSubmit();
+    await waitFor(() => expect(api.posted()).toHaveLength(1));
+    expect(api.posted()[0]).toMatchObject({ time: "22:00", calculatedArrivalTime: "01:15", estimatedDurationHours: 3, estimatedDurationMinutes: 15 });
+  });
+
+  it("won't take an arrival equal to the departure", async () => {
+    server();
+    renderWithApp(<CreateAdPage />);
+    await screen.findByPlaceholderText("Jo‘nash shahri");
+    fireEvent.click(tile("Yetib borish vaqti"));
+    fireEvent.click(await screen.findByRole("button", { name: "Soat 11" }));
+    fireEvent.click(screen.getByRole("button", { name: "00 daqiqa" }));
+    expect(screen.getByText("Jo‘nash vaqti bilan bir xil bo‘lmasin")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Tayyor" }).disabled).toBe(true);
+  });
+
+  it("today, only times after now can be chosen", async () => {
+    server();
+    renderWithApp(<CreateAdPage />);
+    await screen.findByPlaceholderText("Jo‘nash shahri");
+    fireEvent.click(tile("Jo‘nash vaqti"));
+    expect((await screen.findByRole("button", { name: "Soat 09" })).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Soat 10" }));
+    expect(screen.getByRole("button", { name: "20 daqiqa" }).disabled).toBe(true); // 10:20 is now
+    expect(screen.getByRole("button", { name: "25 daqiqa" }).disabled).toBe(false);
+  });
+
+  it("moves a departure that has passed to the next hour when the day changes to today", async () => {
+    server();
+    renderWithApp(<CreateAdPage />);
+    await screen.findByPlaceholderText("Jo‘nash shahri");
+    await pickDate(/Ertaga/);
+    await pickTime("Jo‘nash vaqti", "07", "00");
+    await pickDate(/Bugun/);
+    expect(tile("Jo‘nash vaqti").textContent).toContain("11:00");
+  });
+
+  it("passengers choose a day and time only", async () => {
+    const api = server({ vehicles: [] });
+    renderWithApp(<CreateAdPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Yo‘lovchiman" }));
+    expect(screen.queryByRole("button", { name: /^Yetib borish vaqti/ })).toBeNull();
+    await fillAndSubmit();
+    await waitFor(() => expect(api.posted()).toHaveLength(1));
+    expect(api.posted()[0]).not.toHaveProperty("calculatedArrivalTime");
   });
 });

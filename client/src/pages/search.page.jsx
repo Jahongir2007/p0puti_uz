@@ -19,7 +19,8 @@ import { formatDeparture } from "../utils/helpers";
 import { useSearchAds } from "../queries/searchAds.query";
 import { CityInput } from "../components/cityInput.component";
 import { localizedName } from "../utils/locations";
-import { addDays, mondayIndex, tashkentHour, tashkentToday, ymdToIso } from "../utils/calendar";
+import { tashkentHour, tashkentToday } from "../utils/calendar";
+import { useShortDate } from "../hooks/useShortDate.hook";
 import { DatePickerSheet } from "../components/datePicker.component";
 import { TimePickerSheet } from "../components/timePicker.component";
 import {
@@ -145,7 +146,7 @@ function RideCardSkeleton() {
 }
 
 function SearchPage({ onNavigate }) {
-  const { t, i18n } = useTranslation("search");
+  const { t } = useTranslation("search");
   const today = tashkentToday();
 
   const [from, setFrom] = useState("Zarafshon");
@@ -171,13 +172,8 @@ function SearchPage({ onNavigate }) {
     setOpenPicker(null);
   };
 
-  // "Bugun, 28-noy", "Ertaga, 29-noy", then "Ch, 2-dek": short, so it fits the half-width tile
-  const dateText = (() => {
-    const { day, date } = formatDeparture(ymdToIso(selectedDate), i18n.language);
-    const nearDay = selectedDate === today || selectedDate === addDays(today, 1);
-    const weekday = t("common:picker.weekdaysShort", { returnObjects: true })[mondayIndex(selectedDate)];
-    return `${nearDay ? day : weekday}, ${date}`;
-  })();
+  const shortDate = useShortDate();
+  const dateText = shortDate(selectedDate);
   const timeText = selectedTime ? t("form.fromTime", { time: selectedTime }) : t("form.anyTime");
 
   const [searchParams, setSearchParams] = useState(null); // null = no search yet

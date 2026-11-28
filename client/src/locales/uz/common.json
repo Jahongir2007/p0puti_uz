@@ -73,6 +73,13 @@
       "Sh",
       "Ya"
     ],
-    "dayLabel": "{{day}}-{{month}}, {{weekday}}"
+    "dayLabel": "{{day}}-{{month}}, {{weekday}}",
+    "exact": {
+      "hour": "Soat",
+      "minute": "Daqiqa",
+      "done": "Tayyor",
+      "hourLabel": "Soat {{hour}}",
+      "minuteLabel": "{{minute}} daqiqa"
+    }
   }
 }

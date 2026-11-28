@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { addDays, mondayIndex, monthGrid, shiftMonth, tashkentHour, tashkentToday } from "./calendar";
+import {
+  addDays,
+  defaultDeparture,
+  earliestDeparture,
+  fromHHMM,
+  mondayIndex,
+  monthGrid,
+  shiftMonth,
+  tashkentHour,
+  tashkentToday,
+  toHHMM,
+} from "./calendar";
 
 describe("calendar", () => {
   it("uses Tashkent's date and hour, which is already tomorrow at 20:00 UTC", () => {
@@ -30,5 +41,27 @@ describe("calendar", () => {
   it("moves between months across the year end", () => {
     expect(shiftMonth({ year: 2026, month: 11 }, 1)).toEqual({ year: 2027, month: 0 });
     expect(shiftMonth({ year: 2027, month: 0 }, -1)).toEqual({ year: 2026, month: 11 });
+  });
+});
+
+describe("times of day", () => {
+  const at = (iso) => Date.parse(iso);
+
+  it("converts HH:MM to minutes and back, wrapping past midnight", () => {
+    expect(fromHHMM("08:30")).toBe(510);
+    expect(toHHMM(510)).toBe("08:30");
+    expect(toHHMM(1440 + 90)).toBe("01:30");
+  });
+
+  it("finds the earliest departure the server accepts: the next 5-minute mark after now", () => {
+    expect(earliestDeparture(at("2026-11-28T05:02:00Z"))).toEqual({ date: "2026-11-28", time: "10:05" });
+    expect(earliestDeparture(at("2026-11-28T05:05:00Z"))).toEqual({ date: "2026-11-28", time: "10:10" }); // 10:05 is now: too late
+    expect(earliestDeparture(at("2026-11-28T18:57:00Z"))).toEqual({ date: "2026-11-29", time: "00:00" }); // 23:57
+  });
+
+  it("starts the form at 08:00, or the next full hour once 08:00 has passed, or tomorrow late at night", () => {
+    expect(defaultDeparture(at("2026-11-28T01:00:00Z"))).toEqual({ date: "2026-11-28", time: "08:00" }); // 06:00
+    expect(defaultDeparture(at("2026-11-28T05:20:00Z"))).toEqual({ date: "2026-11-28", time: "11:00" }); // 10:20
+    expect(defaultDeparture(at("2026-11-28T18:10:00Z"))).toEqual({ date: "2026-11-29", time: "08:00" }); // 23:10
   });
 });

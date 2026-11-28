@@ -73,6 +73,13 @@
       "Сб",
       "Вс"
     ],
-    "dayLabel": "{{day}} {{month}}, {{weekday}}"
+    "dayLabel": "{{day}} {{month}}, {{weekday}}",
+    "exact": {
+      "hour": "Часы",
+      "minute": "Минуты",
+      "done": "Готово",
+      "hourLabel": "{{hour}} ч",
+      "minuteLabel": "{{minute}} мин"
+    }
   }
 }

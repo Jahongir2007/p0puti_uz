@@ -14,13 +14,17 @@
   "date": "Jo‘nash kuni",
   "time": "Jo‘nash vaqti",
   "duration": {
-    "label": "Taxminiy yo‘l vaqti",
-    "hours": "soat",
-    "minutes": "daq"
+    "label": "Yo‘lda",
+    "value": "{{hours}} soat {{minutes}} daq",
+    "hours": "{{hours}} soat",
+    "minutes": "{{minutes}} daq"
   },
   "arrival": {
-    "label": "Yetib borish vaqti:",
-    "nextDay": "(Ertasi kuni)"
+    "label": "Yetib borish vaqti",
+    "nextDay": "(Ertasi kuni)",
+    "nextDayShort": "ertasi kuni",
+    "hint": "Taxminan qachon yetib borasiz?",
+    "same": "Jo‘nash vaqti bilan bir xil bo‘lmasin"
   },
   "seats": {
     "driverLabel": "Bo‘sh joylar",
