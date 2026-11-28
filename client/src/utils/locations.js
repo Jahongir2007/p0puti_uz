@@ -61,6 +61,9 @@ export function localizedRegion(l, lang) {
   return lang === "ru" ? l.regionRu : l.region;
 }
 
+// "Samarqand tumani", "Районы города Ташкента": districts, not the city itself
+const isDistrict = (l) => /\btuman(i|lari)\b/.test(normalize(l.name));
+
 export function searchLocations(query, limit = 8) {
   const q = normalize(query);
   if (q.length < 2) return [];
@@ -70,9 +73,10 @@ export function searchLocations(query, limit = 8) {
   for (const l of INDEX) {
     if (l.keys.some((k) => k.startsWith(q))) starts.push(l);
     else if (l.keys.some((k) => k.includes(q))) contains.push(l);
-    if (starts.length >= limit) break;
   }
-  return [...starts, ...contains].slice(0, limit);
+  // Cities before districts with the same name: "sam" → Samarqand, then Samarqand tumani
+  const citiesFirst = (list) => [...list.filter((l) => !isDistrict(l)), ...list.filter(isDistrict)];
+  return [...citiesFirst(starts), ...citiesFirst(contains)].slice(0, limit);
 }
 
 export function exactLocation(query) {
