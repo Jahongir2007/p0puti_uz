@@ -6,8 +6,6 @@ import {
   ChevronRight,
   Globe,
   HelpCircle,
-  ShieldCheck,
-  Star,
   Plus,
   Pencil,
   Trash2,
@@ -29,6 +27,9 @@ import {
 import { saveLanguage } from "../i18n";
 import { showConfirm } from "../utils/telegram";
 import { BottomSheet } from "../components/bottomSheet.component";
+import { useUserAds } from "../queries/userAds.query";
+import { openSupport, supportUsername } from "../utils/support";
+import { formatMonthYear } from "../utils/helpers";
 
 // Error sheet for a failed add/edit/delete. Texts: vehicle.<key>.title / .message in profile.json
 const vehicleErrorSheet = (error, fallbackKey) =>
@@ -341,8 +342,13 @@ function ProfilePage({ onNavigate }) {
     },
   });
 
+  // Active ads: the first page is enough; "10+" when there are more
+  const { ads: myAds, hasNextPage: hasMoreAds, isLoading: adsLoading } = useUserAds();
+
   if (isLoading) return <ProfilePageSkeleton />;
   if (isError) return <ProfileError error={error} onRetry={refetch} />;
+
+  const memberSince = user?.createdAt ? formatMonthYear(user.createdAt, i18n.language) : null;
 
   const profilePhoto = tgUser?.photo_url || null;
   const firstName = tgUser?.first_name || t("unknownUser");
@@ -388,6 +394,7 @@ function ProfilePage({ onNavigate }) {
           <button
             type="button"
             aria-label={t("back")}
+            onClick={() => onNavigate("home")}
             className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-100 transition active:scale-95"
           >
             <ArrowLeft className="h-5 w-5 text-slate-700" />
@@ -411,10 +418,6 @@ function ProfilePage({ onNavigate }) {
                   {userInitials}
                 </div>
               )}
-
-              <div className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500 text-white ring-2 ring-white">
-                <ShieldCheck className="h-4 w-4" />
-              </div>
             </div>
 
             <h2 className="mt-3 text-lg font-bold text-slate-900">
@@ -422,24 +425,23 @@ function ProfilePage({ onNavigate }) {
             </h2>
             <p className="text-xs font-semibold text-sky-600">{username}</p>
 
-            {/* Placeholder stats until the backend provides them */}
+            {/* Real numbers: cars, active ads, and when the user joined */}
             <div className="mt-4 grid w-full grid-cols-3 gap-2 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
               <div className="flex flex-col items-center">
-                <div className="flex items-center gap-1 text-sm font-extrabold text-amber-500">
-                  <Star className="h-4 w-4 fill-amber-400 stroke-amber-400" />
-                  <span>4.9</span>
-                </div>
-                <span className="text-[10px] font-medium text-slate-400">{t("stats.rating")}</span>
+                <span className="text-sm font-extrabold text-slate-900">{vehicles ? vehicles.length : "–"}</span>
+                <span className="text-[10px] font-medium text-slate-400">{t("stats.vehicles")}</span>
               </div>
 
               <div className="flex flex-col items-center border-x border-slate-200/80">
-                <span className="text-sm font-extrabold text-slate-900">124</span>
-                <span className="text-[10px] font-medium text-slate-400">{t("stats.trips")}</span>
+                <span className="text-sm font-extrabold text-slate-900">
+                  {adsLoading ? "–" : `${myAds.length}${hasMoreAds ? "+" : ""}`}
+                </span>
+                <span className="text-[10px] font-medium text-slate-400">{t("stats.activeAds")}</span>
               </div>
 
               <div className="flex flex-col items-center">
-                <span className="text-sm font-extrabold text-slate-900">98%</span>
-                <span className="text-[10px] font-medium text-slate-400">{t("stats.positive")}</span>
+                <span className="text-sm font-extrabold text-slate-900">{memberSince ?? "–"}</span>
+                <span className="text-[10px] font-medium text-slate-400">{t("stats.memberSince")}</span>
               </div>
             </div>
           </div>
@@ -621,18 +623,21 @@ function ProfilePage({ onNavigate }) {
                 </div>
               </button>
 
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-2xl p-3 transition hover:bg-slate-50 active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                    <HelpCircle className="h-4 w-4" />
+              {supportUsername && (
+                <button
+                  type="button"
+                  onClick={openSupport}
+                  className="flex w-full items-center justify-between rounded-2xl p-3 transition hover:bg-slate-50 active:scale-[0.99]"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                      <HelpCircle className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-900">{t("settings.support")}</span>
                   </div>
-                  <span className="text-xs font-bold text-slate-900">{t("settings.support")}</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-400" />
-              </button>
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                </button>
+              )}
             </div>
           )}
         </section>
