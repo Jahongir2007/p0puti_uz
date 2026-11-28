@@ -5,12 +5,13 @@ const trip = { telegramId: '700000001', from: 'A', to: 'B', date: '2026-12-05', 
 
 async function startWorker() {
     const rabbit = fakeRabbit();
+    const message = () => vi.fn(async (_telegramId: string, ..._rest: unknown[]) => {});
     const bot = {
-        sendWelcomeMessage: vi.fn(async () => {}),
-        sendAdCreatedMessage: vi.fn(async () => {}),
-        sendAdDuplicateMessage: vi.fn(async () => {}),
-        sendAdTooCloseMessage: vi.fn(async () => {}),
-        sendAdInPastMessage: vi.fn(async () => {}),
+        sendWelcomeMessage: message(),
+        sendAdCreatedMessage: message(),
+        sendAdDuplicateMessage: message(),
+        sendAdTooCloseMessage: message(),
+        sendAdInPastMessage: message(),
     };
     await new TelegramWorker(rabbit as any, fakeMetrics() as any, bot as any).onModuleInit();
     return { handle: rabbit.handlers.telegram_events, bot };
