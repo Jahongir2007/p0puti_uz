@@ -35,7 +35,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
         this.channel.on('error', (e) => console.error('RabbitMQ channel error:', e));
 
         // await this.channel.assertQueue('ads', { durable: true });
-        for (const q of ['ads', 'telegram_events']) {
+        for (const q of ['ads', 'telegram_events', 'users']) {
             await this.channel.assertQueue(q, { durable: true });
         }
 

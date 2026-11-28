@@ -49,6 +49,21 @@ export class UserService {
 
         // console.log("Signing JWT token");
 
+        try{
+            await this.rabbitMQ.publish('users', {
+            type: 'UPDATE_USER',
+            data: {
+                telegramId: telegramUser.id.toString(),
+                firstName: telegramUser.firstName,
+                lastName: telegramUser?.lastName,
+                username: telegramUser?.username,
+                photoUrl: telegramUser?.photoUrl
+            }
+        });
+        }catch(err: unknown){
+            console.error('Profile sync not queued:', err);
+        }
+    
         const accessToken = this.jwtService.sign({
             sub: user.id,
             telegramId: telegramUser.id.toString(),
