@@ -63,11 +63,12 @@ export async function getAdById(id){
   }
 }
 
-export const searchAds = async ({ from, to, date, passengers, type, cursor, limit = 10 }) => {
+export const searchAds = async ({ from, to, date, time, passengers, type, cursor, limit = 10 }) => {
   try {
     const accessToken = useAuthStore.getState().accessToken;
     const { data } = await api.get("/ad/search", {
-      params: { from, to, date, passenger: passengers, type, cursor, limit }, // the server reads `passenger`
+      // the server reads `passenger`; `time` (HH:MM, optional) = leaving at or after it
+      params: { from, to, date, time, passenger: passengers, type, cursor, limit },
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!data.success) throw new Error(data.error ?? "Qidiruvda xatolik");
