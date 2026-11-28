@@ -1,18 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuthController } from './auth.controller';
+import { AuthController } from './auth.controller.js';
 
 describe('AuthController', () => {
-  let controller: AuthController;
+    it('passes initData from the body to the auth service', async () => {
+        const auth = { authenticateTelegram: vi.fn(async () => ({ user: 'result' })) };
+        const controller = new AuthController(auth as any);
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [AuthController],
-    }).compile();
-
-    controller = module.get<AuthController>(AuthController);
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
+        await expect(controller.authenticateTelegram('init-data')).resolves.toEqual({ user: 'result' });
+        expect(auth.authenticateTelegram).toHaveBeenCalledWith('init-data');
+    });
 });

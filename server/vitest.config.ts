@@ -9,5 +9,6 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.spec.ts'],
+    setupFiles: ['reflect-metadata'], // decorators need it, as in the real app
   },
 });
