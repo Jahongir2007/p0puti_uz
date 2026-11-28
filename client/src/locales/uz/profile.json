@@ -55,6 +55,21 @@
     "notifications": "Bildirishnomalar",
     "language": "Ilova tili",
     "support": "Qo'llab-quvvatlash",
-    "userAds": "Mening e'lonlarim"
+    "userAds": "Mening e'lonlarim",
+    "theme": "Mavzu"
+  },
+  "theme": {
+    "auto": {
+      "label": "Avtomatik",
+      "hint": "Telegram mavzusi bilan bir xil"
+    },
+    "light": {
+      "label": "Yorug‘",
+      "hint": "Doim yorug‘"
+    },
+    "dark": {
+      "label": "Qorong‘i",
+      "hint": "Doim qorong‘i"
+    }
   }
 }

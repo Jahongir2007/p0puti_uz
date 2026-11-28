@@ -11,7 +11,10 @@ import {
   Trash2,
   Check,
   CircleX,
-  ClipboardList
+  ClipboardList,
+  Moon,
+  Sun,
+  SunMoon
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -25,6 +28,7 @@ import {
   deleteTelegramUserVehicle,
 } from "../api/vehicle.api";
 import { saveLanguage } from "../i18n";
+import { getThemePref, setThemePref } from "../theme";
 import { showConfirm } from "../utils/telegram";
 import { BottomSheet } from "../components/bottomSheet.component";
 import { useUserAds } from "../queries/userAds.query";
@@ -146,6 +150,59 @@ function LanguagePicker({ current, onSelect, onBack }) {
 }
 
 // One form for both "add" and "edit"
+const THEME_OPTIONS = [
+  { value: "auto", icon: SunMoon },
+  { value: "light", icon: Sun },
+  { value: "dark", icon: Moon },
+];
+
+function ThemePicker({ current, onSelect, onBack }) {
+  const { t } = useTranslation("profile");
+
+  return (
+    <div className="rounded-3xl bg-white p-2 shadow-sm ring-1 ring-slate-100">
+      <div className="flex items-center gap-2 border-b border-slate-100 p-2 pb-3">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label={t("back")}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 active:scale-95"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <span className="text-xs font-bold text-slate-900">{t("settings.theme")}</span>
+      </div>
+
+      <div className="mt-1 space-y-1">
+        {THEME_OPTIONS.map(({ value, icon: Icon }) => {
+          const active = value === current;
+          return (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onSelect(value)}
+              className={`flex w-full items-center justify-between rounded-2xl p-3 transition active:scale-[0.99] ${
+                active ? "bg-sky-50" : "hover:bg-slate-50"
+              }`}
+            >
+              <div className="flex items-center gap-3 text-left">
+                <Icon className={`h-4 w-4 ${active ? "text-sky-600" : "text-slate-500"}`} />
+                <div>
+                  <p className={`text-xs font-bold ${active ? "text-sky-700" : "text-slate-900"}`}>
+                    {t(`theme.${value}.label`)}
+                  </p>
+                  <p className="text-[10px] font-medium text-slate-400">{t(`theme.${value}.hint`)}</p>
+                </div>
+              </div>
+              {active && <Check className="h-4 w-4 text-sky-600" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function VehicleForm({ title, form, setForm, onSubmit, onCancel, isPending, submitLabel }) {
   const { t } = useTranslation("profile");
   const models = form.brand ? CAR_BRANDS[form.brand] : null;
@@ -260,6 +317,14 @@ function ProfilePage({ onNavigate }) {
   const [editCarForm, setEditCarForm] = useState(EMPTY_CAR);
 
   const [isChoosingLanguage, setIsChoosingLanguage] = useState(false);
+  const [isChoosingTheme, setIsChoosingTheme] = useState(false);
+  const [themePref, setThemePrefState] = useState(getThemePref);
+
+  const handleSelectTheme = (value) => {
+    setThemePref(value);
+    setThemePrefState(value);
+    setIsChoosingTheme(false);
+  };
 
   const currentLanguage = i18n.resolvedLanguage ?? "uz";
   const currentLanguageLabel =
@@ -574,6 +639,8 @@ function ProfilePage({ onNavigate }) {
               onSelect={handleSelectLanguage}
               onBack={() => setIsChoosingLanguage(false)}
             />
+          ) : isChoosingTheme ? (
+            <ThemePicker current={themePref} onSelect={handleSelectTheme} onBack={() => setIsChoosingTheme(false)} />
           ) : (
             <div className="space-y-1 rounded-3xl bg-white p-2 shadow-sm ring-1 ring-slate-100">
               {/* <div className="flex items-center justify-between rounded-2xl p-3 transition hover:bg-slate-50">
@@ -619,6 +686,23 @@ function ProfilePage({ onNavigate }) {
                 </div>
                 <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
                   <span>{currentLanguageLabel}</span>
+                  <ChevronRight className="h-4 w-4" />
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsChoosingTheme(true)}
+                className="flex w-full items-center justify-between rounded-2xl p-3 transition hover:bg-slate-50 active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                    <SunMoon className="h-4 w-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-900">{t("settings.theme")}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                  <span>{t(`theme.${themePref}.label`)}</span>
                   <ChevronRight className="h-4 w-4" />
                 </div>
               </button>
