@@ -4,6 +4,15 @@ import { CreateVehicleInterface } from './interface/createVehicle.interface.js';
 import { UpdateVehicleInterface } from './interface/updateVehicle.interface.js';
 import { Temporal } from "@js-temporal/polyfill";
 
+const isPlateTaken = (err: unknown) => (err as { sqlState?: string })?.sqlState === '23505';
+const plateTaken = { 
+    success: false, 
+    code: 'PLATE_TAKEN',
+    data: { 
+        message: 'This plate number is already exists' 
+    } 
+};
+
 @Injectable()
 export class VehicleService {
     async getTelegramUserVehiclesByUserId(userId: bigint){
@@ -28,23 +37,21 @@ export class VehicleService {
             .first();
         
         if(userVehicle){
-            return {
-                success: true,
-                data: {
-                    message: "This plate number is already exists"
-                }
-            }
+            return plateTaken;
         }
 
-        let vehicle = await db.orm.public.Vehicles.create({
-            userId: BigInt(userId),
-            color: vehicleData.color,
-            brand: vehicleData.brand,
-            plateNumber: vehicleData.plateNumber,
-            model: vehicleData.model
-        });
-
-        return vehicle;
+        try{
+            return await db.orm.public.Vehicles.create({
+                userId: BigInt(userId),
+                color: vehicleData.color,
+                brand: vehicleData.brand,
+                plateNumber: vehicleData.plateNumber,
+                model: vehicleData.model
+            });
+        }catch(err: unknown){
+            if(isPlateTaken(err)) return plateTaken;
+            throw err;
+        }
     }
 
     async updateTelegramUserVehicle(
@@ -52,44 +59,49 @@ export class VehicleService {
         userId: bigint,
         vehicleId: bigint,
     ) {
-        return await db.transaction(async (tx) => {
-            const lockQuery = db.raw.sql`
-                SELECT "id"
-                FROM "vehicles"
-                WHERE "id" = ${vehicleId}
-                    AND "user_id" = ${userId}
-                FOR UPDATE
-            `.returnsRow({
-                id: 'pg/int8@1',
-            }).build();
+        try{
+            return await db.transaction(async (tx) => {
+                const lockQuery = db.raw.sql`
+                    SELECT "id"
+                    FROM "vehicles"
+                    WHERE "id" = ${vehicleId}
+                        AND "user_id" = ${userId}
+                    FOR UPDATE
+                `.returnsRow({
+                    id: 'pg/int8@1',
+                }).build();
 
-            const vehicles = await tx.query(lockQuery);
+                const vehicles = await tx.query(lockQuery);
 
-            if (vehicles.length === 0) {
+                if (vehicles.length === 0) {
+                    return {
+                        success: false,
+                        data: {
+                        message: "User vehicle is not found",
+                        },
+                    };
+                }
+
+                const updatedVehicle = await tx.orm.public.Vehicles
+                .where({
+                    id: vehicleId,
+                })
+                .update({
+                    brand: vehicleData.brand,
+                    model: vehicleData.model,
+                    color: vehicleData.color,
+                    plateNumber: vehicleData.plateNumber,
+                });
+
                 return {
-                    success: false,
-                    data: {
-                    message: "User vehicle is not found",
-                    },
+                    success: true,
+                    data: updatedVehicle,
                 };
-            }
-
-            const updatedVehicle = await tx.orm.public.Vehicles
-            .where({
-                id: vehicleId,
-            })
-            .update({
-                brand: vehicleData.brand,
-                model: vehicleData.model,
-                color: vehicleData.color,
-                plateNumber: vehicleData.plateNumber,
             });
-
-            return {
-                success: true,
-                data: updatedVehicle,
-            };
-        });
+        }catch(err: unknown){
+            if(isPlateTaken(err)) return plateTaken;
+            throw err;
+        }
     }
 
     async deleteTelegramUserVehicle(userId: bigint, vehicleId: bigint){

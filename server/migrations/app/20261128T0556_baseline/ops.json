@@ -1,0 +1,421 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.ads",
+    "label": "Create table \"ads\"",
+    "summary": "Creates table \"ads\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "ads"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"ads\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ads\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"ads\"",
+        "sql": "CREATE TABLE \"public\".\"ads\" (\n  \"arrival_time\" timestamptz,\n  \"created_at\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deleted_at\" timestamptz,\n  \"departure_date\" timestamptz NOT NULL,\n  \"departure_time\" timestamptz,\n  \"description\" character varying(1000),\n  \"from_location\" character varying(500) NOT NULL,\n  \"id\" BIGSERIAL NOT NULL,\n  \"luggage_allowed\" bool DEFAULT true NOT NULL,\n  \"price\" int4,\n  \"seats\" int4 NOT NULL,\n  \"status\" text DEFAULT 'ACTIVE' NOT NULL,\n  \"to_location\" character varying(500) NOT NULL,\n  \"type\" text NOT NULL,\n  \"updated_at\" timestamptz DEFAULT (now()) NOT NULL,\n  \"user_id\" int8 NOT NULL,\n  \"vehicle_id\" int8,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"ads_status_check_e5ea8b65\" CHECK (\"status\" IN ('ACTIVE', 'COMPLETED', 'CANCELLED', 'EXPIRED')),\n  CONSTRAINT \"ads_type_check_bbe926b3\" CHECK (\"type\" IN ('DRIVER', 'PASSENGER'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"ads\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ads\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.users",
+    "label": "Create table \"users\"",
+    "summary": "Creates table \"users\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "users"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"users\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"users\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"users\"",
+        "sql": "CREATE TABLE \"public\".\"users\" (\n  \"created_at\" timestamptz DEFAULT (now()) NOT NULL,\n  \"first_name\" character varying(255) NOT NULL,\n  \"id\" BIGSERIAL NOT NULL,\n  \"is_active\" bool DEFAULT true NOT NULL,\n  \"last_login_at\" timestamptz,\n  \"last_name\" character varying(255),\n  \"phone\" character varying(30),\n  \"photo_url\" text,\n  \"telegram_id\" int8 NOT NULL,\n  \"updated_at\" timestamptz DEFAULT (now()) NOT NULL,\n  \"username\" character varying(255),\n  CONSTRAINT \"users_pkey\" PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"users\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"users\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.vehicles",
+    "label": "Create table \"vehicles\"",
+    "summary": "Creates table \"vehicles\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "vehicles"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"vehicles\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"vehicles\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"vehicles\"",
+        "sql": "CREATE TABLE \"public\".\"vehicles\" (\n  \"brand\" character varying(100) NOT NULL,\n  \"color\" character varying(50) NOT NULL,\n  \"created_at\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deleted_at\" timestamptz,\n  \"id\" BIGSERIAL NOT NULL,\n  \"model\" character varying(100) NOT NULL,\n  \"plate_number\" character varying(20) NOT NULL,\n  \"user_id\" int8 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"vehicles\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"vehicles\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.users.users_telegram_id_key",
+    "label": "Add unique constraint on \"users\" (telegram_id)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "users_telegram_id_key",
+        "table": "users"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"users_telegram_id_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "users_telegram_id_key",
+          "public",
+          "\"public\".\"users\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"users_telegram_id_key\"",
+        "sql": "ALTER TABLE \"public\".\"users\" ADD CONSTRAINT \"users_telegram_id_key\" UNIQUE (\"telegram_id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"users_telegram_id_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "users_telegram_id_key",
+          "public",
+          "\"public\".\"users\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ads.ads_user_id_idx_6c952402",
+    "label": "Create index \"ads_user_id_idx_6c952402\" on \"ads\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ads_user_id_idx_6c952402",
+        "table": "ads"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ads_user_id_idx_6c952402\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ads_user_id_idx_6c952402\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ads_user_id_idx_6c952402\"",
+        "sql": "CREATE INDEX \"ads_user_id_idx_6c952402\" ON \"public\".\"ads\" (\"user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ads_user_id_idx_6c952402\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ads_user_id_idx_6c952402\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ads.ads_vehicle_id_idx_fbbcb34b",
+    "label": "Create index \"ads_vehicle_id_idx_fbbcb34b\" on \"ads\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ads_vehicle_id_idx_fbbcb34b",
+        "table": "ads"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ads_vehicle_id_idx_fbbcb34b\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ads_vehicle_id_idx_fbbcb34b\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ads_vehicle_id_idx_fbbcb34b\"",
+        "sql": "CREATE INDEX \"ads_vehicle_id_idx_fbbcb34b\" ON \"public\".\"ads\" (\"vehicle_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ads_vehicle_id_idx_fbbcb34b\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ads_vehicle_id_idx_fbbcb34b\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.vehicles.vehicles_user_id_idx_6c952402",
+    "label": "Create index \"vehicles_user_id_idx_6c952402\" on \"vehicles\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "vehicles_user_id_idx_6c952402",
+        "table": "vehicles"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"vehicles_user_id_idx_6c952402\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"vehicles_user_id_idx_6c952402\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"vehicles_user_id_idx_6c952402\"",
+        "sql": "CREATE INDEX \"vehicles_user_id_idx_6c952402\" ON \"public\".\"vehicles\" (\"user_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"vehicles_user_id_idx_6c952402\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"vehicles_user_id_idx_6c952402\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ads.ads_user_id_fkey",
+    "label": "Add foreign key \"ads_user_id_fkey\" on \"ads\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ads_user_id_fkey",
+        "table": "ads"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ads_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ads_user_id_fkey",
+          "public",
+          "\"public\".\"ads\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ads_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ads\"\nADD CONSTRAINT \"ads_user_id_fkey\"\nFOREIGN KEY (\"user_id\")\nREFERENCES \"public\".\"users\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ads_user_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ads_user_id_fkey",
+          "public",
+          "\"public\".\"ads\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ads.ads_vehicle_id_fkey",
+    "label": "Add foreign key \"ads_vehicle_id_fkey\" on \"ads\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ads_vehicle_id_fkey",
+        "table": "ads"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ads_vehicle_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ads_vehicle_id_fkey",
+          "public",
+          "\"public\".\"ads\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ads_vehicle_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ads\"\nADD CONSTRAINT \"ads_vehicle_id_fkey\"\nFOREIGN KEY (\"vehicle_id\")\nREFERENCES \"public\".\"vehicles\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ads_vehicle_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ads_vehicle_id_fkey",
+          "public",
+          "\"public\".\"ads\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.vehicles.vehicles_user_id_fkey",
+    "label": "Add foreign key \"vehicles_user_id_fkey\" on \"vehicles\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "vehicles_user_id_fkey",
+        "table": "vehicles"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"vehicles_user_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "vehicles_user_id_fkey",
+          "public",
+          "\"public\".\"vehicles\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"vehicles_user_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"vehicles\"\nADD CONSTRAINT \"vehicles_user_id_fkey\"\nFOREIGN KEY (\"user_id\")\nREFERENCES \"public\".\"users\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"vehicles_user_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "vehicles_user_id_fkey",
+          "public",
+          "\"public\".\"vehicles\""
+        ]
+      }
+    ]
+  }
+]
