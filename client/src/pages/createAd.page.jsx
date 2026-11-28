@@ -18,7 +18,6 @@ import {
   Users,
   Luggage,
   Timer,
-  Flag,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getTelegramUserVehicles } from "../api/vehicle.api";
@@ -26,6 +25,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { postTelegramUserAd } from "../api/ad.api";
 import { CityInput } from "../components/cityInput.component";
 import { BottomSheet } from "../components/bottomSheet.component";
+import { DatePickerSheet } from "../components/datePicker.component";
+import { ExactTimePickerSheet } from "../components/exactTimePicker.component";
+import { DurationPickerSheet } from "../components/durationPicker.component";
+import { defaultDeparture, earliestDeparture, fromHHMM, toHHMM } from "../utils/calendar";
+import { useShortDate } from "../hooks/useShortDate.hook";
 
 // How each outcome is shown. Texts: result.<key>.title / .message in createAd.json
 const RESULTS = {
@@ -45,10 +49,22 @@ function resultForError(error) {
   return RESULTS[code] ?? RESULTS.unknown;
 }
 
-// Today's date in Tashkent as YYYY-MM-DD.
-// toISOString() uses UTC, which is still "yesterday" before 05:00 Tashkent time.
-function tashkentToday() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent" }).format(new Date());
+// A date + time tile that opens its picker sheet
+function PickerTile({ icon: Icon, iconClass, label, value, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-haspopup="dialog"
+      className="flex min-w-0 items-center gap-2 rounded-2xl bg-slate-50 px-2.5 py-3 text-left ring-1 ring-slate-100 transition active:scale-[0.98]"
+    >
+      <Icon className={`h-4 w-4 shrink-0 ${iconClass}`} />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[10px] font-medium text-slate-400">{label}</span>
+        <span className="block truncate text-xs font-semibold text-slate-900">{value}</span>
+      </span>
+    </button>
+  );
 }
 
 function CreateAdPage() {
@@ -60,16 +76,18 @@ function CreateAdPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
-  const today = tashkentToday();
-  const [date, setDate] = useState(today);
-  const [time, setTime] = useState("08:00");
+  // Starts at 08:00 today, or the next full hour once 08:00 has passed
+  const [initial] = useState(defaultDeparture);
+  const [date, setDate] = useState(initial.date);
+  const [time, setTime] = useState(initial.time);
+  const [openPicker, setOpenPicker] = useState(null); // "date" | "time" | "duration" while a sheet is open
   const [price, setPrice] = useState("");
   const [seats, setSeats] = useState(3);
   const [selectedVehicleId, setSelectedVehicleId] = useState("");
   const [note, setNote] = useState("");
 
-  const [durationHours, setDurationHours] = useState(2);
-  const [durationMinutes, setDurationMinutes] = useState(0);
+  // How long the trip takes; the app works out the arrival from it
+  const [tripMinutes, setTripMinutes] = useState(120);
 
   const [allowGroupJoin, setAllowGroupJoin] = useState(true);
   const [allowLuggage, setAllowLuggage] = useState(true);
@@ -101,30 +119,32 @@ function CreateAdPage() {
     }
   }, [vehicles]);
 
-  const calculateArrivalTime = () => {
-    if (!date || !time) return null;
+  // The server refuses departures that aren't in the future
+  const earliest = earliestDeparture();
+  const minTime = date === earliest.date ? earliest.time : null;
 
-    const [hours, minutes] = time.split(":").map(Number);
-    const departureDate = new Date(date);
-    departureDate.setHours(hours, minutes, 0, 0);
-
-    const arrivalDate = new Date(
-      departureDate.getTime() +
-        (Number(durationHours) * 60 + Number(durationMinutes)) * 60 * 1000
-    );
-
-    const isNextDay = arrivalDate.getDate() !== departureDate.getDate();
-
-    const arrivalTimeString = arrivalDate.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-
-    return { timeString: arrivalTimeString, isNextDay, fullDate: arrivalDate };
+  const departure = fromHHMM(time);
+  const arrival = toHHMM(departure + tripMinutes);
+  const arrivesNextDay = departure + tripMinutes >= 1440;
+  const tripText = (mins) => {
+    const hours = Math.floor(mins / 60);
+    const minutes = mins % 60;
+    if (hours && minutes) return t("duration.value", { hours, minutes });
+    return hours ? t("duration.hours", { hours }) : t("duration.minutes", { minutes });
   };
 
-  const arrivalInfo = calculateArrivalTime();
+  const shortDate = useShortDate();
+
+  const handleSelectDate = (newDate) => {
+    setDate(newDate);
+    // 07:00 picked for tomorrow, then the day changed to today at 10:20: start at the next hour instead
+    const first = earliestDeparture();
+    if (newDate === first.date && fromHHMM(time) < fromHHMM(first.time)) {
+      const suggested = defaultDeparture();
+      setTime(suggested.date === newDate ? suggested.time : first.time);
+    }
+    setOpenPicker(null);
+  };
 
   // A driver without a saved car can't post (vehicleId would be 0)
   const driverHasNoVehicle =
@@ -151,9 +171,9 @@ function CreateAdPage() {
               ? `${selectedVehicle.model} (${selectedVehicle.color})`
               : "",
             allowLuggage,
-            estimatedDurationHours: Number(durationHours),
-            estimatedDurationMinutes: Number(durationMinutes),
-            calculatedArrivalTime: arrivalInfo ? arrivalInfo.timeString : null,
+            estimatedDurationHours: Math.floor(tripMinutes / 60),
+            estimatedDurationMinutes: tripMinutes % 60,
+            calculatedArrivalTime: arrival,
           }
         : { allowGroupJoin }),
     };
@@ -235,90 +255,45 @@ function CreateAdPage() {
               />
             </div>
 
-            {/* Date and time */}
+            {/* Date and time: each opens its own sheet */}
             <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2.5 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                <CalendarIcon className="h-4 w-4 shrink-0 text-slate-500" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-medium text-slate-400">{t("date")}</p>
-                  <input
-                    type="date"
-                    min={today}
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full cursor-pointer bg-transparent text-xs font-semibold text-slate-900 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                <Clock className="h-4 w-4 shrink-0 text-slate-500" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-medium text-slate-400">{t("time")}</p>
-                  <input
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="w-full cursor-pointer bg-transparent text-xs font-semibold text-slate-900 outline-none"
-                  />
-                </div>
-              </div>
+              <PickerTile
+                icon={CalendarIcon}
+                iconClass="text-sky-500"
+                label={t("date")}
+                value={shortDate(date)}
+                onClick={() => setOpenPicker("date")}
+              />
+              <PickerTile
+                icon={Clock}
+                iconClass="text-violet-500"
+                label={t("time")}
+                value={time}
+                onClick={() => setOpenPicker("time")}
+              />
             </div>
 
-            {/* Driver: duration and arrival */}
+            {/* Driver: how long the trip takes; the app shows when they arrive */}
             {role === "driver" && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                  <Timer className="h-5 w-5 shrink-0 text-amber-500" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-medium text-slate-400">{t("duration.label")}</p>
-                    <div className="mt-0.5 flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          min="0"
-                          max="48"
-                          value={durationHours}
-                          onChange={(e) => setDurationHours(e.target.value)}
-                          className="w-10 bg-transparent text-sm font-semibold text-slate-900 outline-none text-center rounded bg-slate-200/50"
-                        />
-                        <span className="text-xs text-slate-500 font-medium">
-                          {t("duration.hours")}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          min="0"
-                          max="59"
-                          step="5"
-                          value={durationMinutes}
-                          onChange={(e) => setDurationMinutes(e.target.value)}
-                          className="w-10 bg-transparent text-sm font-semibold text-slate-900 outline-none text-center rounded bg-slate-200/50"
-                        />
-                        <span className="text-xs text-slate-500 font-medium">
-                          {t("duration.minutes")}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {arrivalInfo && (
-                  <div className="flex items-center gap-2 rounded-2xl bg-emerald-50/70 p-3 ring-1 ring-emerald-100/80">
-                    <Flag className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <p className="text-xs font-semibold text-emerald-900">
-                      {t("arrival.label")}{" "}
-                      <span className="font-bold text-emerald-700">{arrivalInfo.timeString}</span>
-                      {arrivalInfo.isNextDay && (
-                        <span className="ml-1 text-[10px] font-normal text-emerald-600">
-                          {t("arrival.nextDay")}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                )}
-              </div>
+              <button
+                type="button"
+                onClick={() => setOpenPicker("duration")}
+                aria-haspopup="dialog"
+                className="flex w-full items-center gap-3 rounded-2xl bg-emerald-50/70 p-3 text-left ring-1 ring-emerald-100/80 transition active:scale-[0.99]"
+              >
+                <Timer className="h-5 w-5 shrink-0 text-emerald-600" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-medium text-emerald-700">{t("duration.title")}</span>
+                  <span className="block text-sm font-bold text-emerald-900">{tripText(tripMinutes)}</span>
+                </span>
+                <span className="shrink-0 text-right">
+                  <span className="block text-[10px] font-medium text-emerald-700">{t("arrival.label")}</span>
+                  <span className="block text-sm font-bold tabular-nums text-emerald-900">{arrival}</span>
+                  {arrivesNextDay && (
+                    <span className="block text-[10px] font-medium text-emerald-600">{t("arrival.nextDay")}</span>
+                  )}
+                </span>
+              </button>
             )}
 
             {/* Seats and price */}
@@ -513,6 +488,38 @@ function CreateAdPage() {
           </div>
         </form>
       </div>
+
+      {openPicker === "date" && (
+        <DatePickerSheet
+          value={date}
+          min={earliest.date}
+          onSelect={handleSelectDate}
+          onClose={() => setOpenPicker(null)}
+        />
+      )}
+      {openPicker === "time" && (
+        <ExactTimePickerSheet
+          title={t("time")}
+          value={time}
+          min={minTime}
+          onSelect={(newTime) => {
+            setTime(newTime); // the trip length stays, so the arrival moves along
+            setOpenPicker(null);
+          }}
+          onClose={() => setOpenPicker(null)}
+        />
+      )}
+      {openPicker === "duration" && (
+        <DurationPickerSheet
+          value={tripMinutes}
+          departure={time}
+          onSelect={(minutes) => {
+            setTripMinutes(minutes);
+            setOpenPicker(null);
+          }}
+          onClose={() => setOpenPicker(null)}
+        />
+      )}
 
       {result && (
         <BottomSheet

@@ -14,12 +14,19 @@
   "date": "Дата отправления",
   "time": "Время отправления",
   "duration": {
-    "label": "Примерное время в пути",
-    "hours": "ч",
-    "minutes": "мин"
+    "title": "Время в пути",
+    "hint": "Сколько примерно займёт дорога?",
+    "empty": "Укажите время в пути",
+    "unitHours": "ч",
+    "unitMinutes": "мин",
+    "hoursLabel": "Часы",
+    "minutesLabel": "Минуты",
+    "value": "{{hours}} ч {{minutes}} мин",
+    "hours": "{{hours}} ч",
+    "minutes": "{{minutes}} мин"
   },
   "arrival": {
-    "label": "Время прибытия:",
+    "label": "Прибытие",
     "nextDay": "(на следующий день)"
   },
   "seats": {
