@@ -17,7 +17,7 @@ import {
   UserRound,
   Users,
   Luggage,
-  Flag,
+  Timer,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getTelegramUserVehicles } from "../api/vehicle.api";
@@ -27,6 +27,7 @@ import { CityInput } from "../components/cityInput.component";
 import { BottomSheet } from "../components/bottomSheet.component";
 import { DatePickerSheet } from "../components/datePicker.component";
 import { ExactTimePickerSheet } from "../components/exactTimePicker.component";
+import { DurationPickerSheet } from "../components/durationPicker.component";
 import { defaultDeparture, earliestDeparture, fromHHMM, toHHMM } from "../utils/calendar";
 import { useShortDate } from "../hooks/useShortDate.hook";
 
@@ -79,13 +80,13 @@ function CreateAdPage() {
   const [initial] = useState(defaultDeparture);
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
-  const [openPicker, setOpenPicker] = useState(null); // "date" | "time" | "arrival" while a sheet is open
+  const [openPicker, setOpenPicker] = useState(null); // "date" | "time" | "duration" while a sheet is open
   const [price, setPrice] = useState("");
   const [seats, setSeats] = useState(3);
   const [selectedVehicleId, setSelectedVehicleId] = useState("");
   const [note, setNote] = useState("");
 
-  // Trip length: the arrival time follows the departure when that changes
+  // How long the trip takes; the app works out the arrival from it
   const [tripMinutes, setTripMinutes] = useState(120);
 
   const [allowGroupJoin, setAllowGroupJoin] = useState(true);
@@ -125,7 +126,6 @@ function CreateAdPage() {
   const departure = fromHHMM(time);
   const arrival = toHHMM(departure + tripMinutes);
   const arrivesNextDay = departure + tripMinutes >= 1440;
-  const tripTo = (arrivalTime) => (fromHHMM(arrivalTime) - departure + 1440) % 1440; // 0 = same time
   const tripText = (mins) => {
     const hours = Math.floor(mins / 60);
     const minutes = mins % 60;
@@ -273,27 +273,25 @@ function CreateAdPage() {
               />
             </div>
 
-            {/* Driver: when they arrive, and how long the trip takes */}
+            {/* Driver: how long the trip takes; the app shows when they arrive */}
             {role === "driver" && (
               <button
                 type="button"
-                onClick={() => setOpenPicker("arrival")}
+                onClick={() => setOpenPicker("duration")}
                 aria-haspopup="dialog"
                 className="flex w-full items-center gap-3 rounded-2xl bg-emerald-50/70 p-3 text-left ring-1 ring-emerald-100/80 transition active:scale-[0.99]"
               >
-                <Flag className="h-5 w-5 shrink-0 text-emerald-600" />
+                <Timer className="h-5 w-5 shrink-0 text-emerald-600" />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[10px] font-medium text-emerald-700">{t("arrival.label")}</span>
-                  <span className="block text-sm font-bold text-emerald-900">
-                    {arrival}
-                    {arrivesNextDay && (
-                      <span className="ml-1 text-[11px] font-medium text-emerald-600">{t("arrival.nextDay")}</span>
-                    )}
-                  </span>
+                  <span className="block text-[10px] font-medium text-emerald-700">{t("duration.title")}</span>
+                  <span className="block text-sm font-bold text-emerald-900">{tripText(tripMinutes)}</span>
                 </span>
                 <span className="shrink-0 text-right">
-                  <span className="block text-[10px] font-medium text-emerald-700">{t("duration.label")}</span>
-                  <span className="block text-xs font-semibold text-emerald-900">{tripText(tripMinutes)}</span>
+                  <span className="block text-[10px] font-medium text-emerald-700">{t("arrival.label")}</span>
+                  <span className="block text-sm font-bold tabular-nums text-emerald-900">{arrival}</span>
+                  {arrivesNextDay && (
+                    <span className="block text-[10px] font-medium text-emerald-600">{t("arrival.nextDay")}</span>
+                  )}
                 </span>
               </button>
             )}
@@ -511,18 +509,12 @@ function CreateAdPage() {
           onClose={() => setOpenPicker(null)}
         />
       )}
-      {openPicker === "arrival" && (
-        <ExactTimePickerSheet
-          title={t("arrival.label")}
-          subtitle={t("arrival.hint")}
-          value={arrival}
-          info={(a) =>
-            `${t("duration.label")}: ${tripText(tripTo(a))}` +
-            (departure + tripTo(a) >= 1440 ? ` · ${t("arrival.nextDayShort")}` : "")
-          }
-          problem={(a) => (tripTo(a) === 0 ? t("arrival.same") : null)}
-          onSelect={(a) => {
-            setTripMinutes(tripTo(a));
+      {openPicker === "duration" && (
+        <DurationPickerSheet
+          value={tripMinutes}
+          departure={time}
+          onSelect={(minutes) => {
+            setTripMinutes(minutes);
             setOpenPicker(null);
           }}
           onClose={() => setOpenPicker(null)}

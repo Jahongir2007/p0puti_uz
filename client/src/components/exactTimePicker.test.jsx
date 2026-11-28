@@ -47,17 +47,6 @@ describe("ExactTimePickerSheet", () => {
     expect(screen.getByText("16:25")).toBeTruthy();
   });
 
-  it("shows a live line under the clock, or the problem, which turns Done off", async () => {
-    renderPicker({
-      info: (time) => `info ${time}`,
-      problem: (time) => (time === "09:00" ? "same as departure" : null),
-    });
-    expect(await screen.findByText("info 08:00")).toBeTruthy();
-    fireEvent.click(hour("09"));
-    expect(screen.getByText("same as departure")).toBeTruthy();
-    expect(done().disabled).toBe(true);
-  });
-
   it("closes without choosing", async () => {
     const { onSelect, onClose } = renderPicker();
     await screen.findByRole("dialog");

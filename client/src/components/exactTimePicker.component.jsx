@@ -9,9 +9,7 @@ const pad = (n) => String(n).padStart(2, "0");
 
 // Choose an exact time: an hour, then minutes in 5-minute steps, then "Done".
 // `min` ("HH:MM"): earlier times can't be chosen (e.g. the past, today).
-// `info(time)`: a live line under the clock (e.g. the trip length).
-// `problem(time)`: a reason the time can't be used, shown instead of `info`; "Done" is then off.
-export function ExactTimePickerSheet({ title, subtitle, value, min, info, problem, onSelect, onClose }) {
+export function ExactTimePickerSheet({ title, subtitle, value, min, onSelect, onClose }) {
   const { t } = useTranslation();
   const minMins = min ? fromHHMM(min) : 0;
   const [draft, setDraft] = useState(() => Math.max(fromHHMM(value), minMins));
@@ -19,7 +17,6 @@ export function ExactTimePickerSheet({ title, subtitle, value, min, info, proble
   const hour = Math.floor(draft / 60);
   const minute = draft % 60;
   const time = toHHMM(draft);
-  const issue = draft < minMins ? null : problem?.(time);
 
   // A new hour keeps the minutes, unless that's too early: then its first allowed minute
   const pickHour = (h) => setDraft(Math.max(h * 60 + minute, minMins));
@@ -32,11 +29,6 @@ export function ExactTimePickerSheet({ title, subtitle, value, min, info, proble
             <p className="text-4xl font-bold tabular-nums tracking-tight text-slate-900" aria-live="polite">
               {time}
             </p>
-            {(issue || info) && (
-              <p className={`mt-1 text-xs font-medium ${issue ? "text-rose-500" : "text-slate-500"}`}>
-                {issue || info(time)}
-              </p>
-            )}
           </div>
 
           <p className="mb-1.5 mt-4 text-[11px] font-semibold text-slate-400">{t("picker.exact.hour")}</p>
@@ -96,7 +88,7 @@ export function ExactTimePickerSheet({ title, subtitle, value, min, info, proble
           <button
             type="button"
             onClick={() => close(() => onSelect(time))}
-            disabled={Boolean(issue) || draft < minMins}
+            disabled={draft < minMins}
             className="mt-5 h-12 w-full rounded-2xl bg-sky-500 text-[15px] font-semibold text-white shadow-lg shadow-sky-500/25 transition active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
           >
             {t("picker.exact.done")}
