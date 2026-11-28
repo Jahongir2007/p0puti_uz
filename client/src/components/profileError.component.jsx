@@ -1,17 +1,8 @@
 import React from "react";
 import { AlertCircle, RefreshCw, MessageSquare, ArrowLeft } from "lucide-react";
+import { openSupport, supportUsername } from "../utils/support";
 
 export function ProfileError({ error, onRetry }) {
-  // Support account from VITE_SUPPORT_USERNAME (without @). No account set → no button.
-  const supportUsername = import.meta.env.VITE_SUPPORT_USERNAME?.replace(/^@/, "").trim();
-
-  const handleContactSupport = () => {
-    const url = `https://t.me/${supportUsername}`;
-    const tg = window.Telegram?.WebApp;
-    if (tg?.openTelegramLink) tg.openTelegramLink(url);
-    else window.open(url, "_blank");
-  };
-
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto flex min-h-screen max-w-md flex-col justify-between px-4 pb-10 pt-5">
@@ -62,7 +53,7 @@ export function ProfileError({ error, onRetry }) {
               {supportUsername && (
                 <button
                   type="button"
-                  onClick={handleContactSupport}
+                  onClick={openSupport}
                   className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-100 text-xs font-bold text-slate-700 transition active:scale-[0.98] hover:bg-slate-200/80"
                 >
                   <MessageSquare className="h-4 w-4" />

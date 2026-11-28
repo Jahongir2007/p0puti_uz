@@ -3,9 +3,9 @@
   "back": "Назад",
   "unknownUser": "Неизвестный пользователь",
   "stats": {
-    "rating": "Рейтинг",
-    "trips": "Поездки",
-    "positive": "Положительные"
+    "vehicles": "Автомобили",
+    "activeAds": "Активные",
+    "memberSince": "С нами с"
   },
   "driverMode": {
     "title": "Режим водителя",

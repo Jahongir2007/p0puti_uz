@@ -3,9 +3,9 @@
   "back": "Orqaga",
   "unknownUser": "Noma'lum foydalanuvchi",
   "stats": {
-    "rating": "Reyting",
-    "trips": "Safarlar",
-    "positive": "Ijobiy"
+    "vehicles": "Avtomobillar",
+    "activeAds": "Faol e’lonlar",
+    "memberSince": "A’zo bo‘lgan"
   },
   "driverMode": {
     "title": "Haydovchi rejimi",

@@ -38,3 +38,9 @@ export function formatDeparture(iso, lang = i18n.resolvedLanguage) {
     time: `${hh}:${mm}`,
   };
 }
+// "sen 2026" / "сен 2026" — browsers have no Uzbek month names, so use ours
+export function formatMonthYear(iso, lang = i18n.resolvedLanguage) {
+  const L = LOCALE[lang] ?? LOCALE.uz;
+  const d = new Date(new Date(iso).getTime() + TASHKENT_OFFSET);
+  return `${L.months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
