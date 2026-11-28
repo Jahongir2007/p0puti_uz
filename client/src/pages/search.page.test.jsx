@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import SearchPage from "./search.page";
 import { useAuthStore } from "../stores/auth.store";
@@ -78,6 +78,7 @@ describe("Search page", () => {
       expect.objectContaining({ from: "Zarafshon", to: "Toshkent", date: tashkentToday(), passenger: 2 }),
     ]);
     expect(api.searches()[0].type).toBeUndefined(); // both kinds of ads
+    expect(api.searches()[0].time).toBeUndefined(); // any time of the day
 
     fireEvent.click(screen.getByRole("button", { name: "Tozalash" }));
     expect(await screen.findByText(/So‘nggi e’lonlar \(2\)/)).toBeTruthy();
@@ -134,5 +135,85 @@ describe("Search page", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Qidirish" }));
     fireEvent.click(await screen.findByRole("button", { name: "Qayta urinish" }));
     expect(await screen.findByText(/Qidiruv natijalari \(1\)/)).toBeTruthy();
+  });
+});
+
+describe("Search page: date and time", () => {
+  // Saturday 28 November 2026, 10:00 in Tashkent
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-28T05:00:00Z"));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const dateTile = () => screen.getByRole("button", { name: /^Sana/ });
+  const timeTile = () => screen.getByRole("button", { name: /^Vaqt/ });
+  const finishAnimation = () => fireEvent.animationEnd(screen.getByRole("dialog"));
+
+  async function pick(tile, option) {
+    fireEvent.click(tile());
+    fireEvent.click(await screen.findByRole("button", { name: option }));
+    finishAnimation();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  }
+
+  it("starts on today and any time", async () => {
+    server();
+    renderPage();
+    await screen.findByText(/So‘nggi e’lonlar/);
+    expect(dateTile().textContent).toContain("Bugun, 28-noy");
+    expect(timeTile().textContent).toContain("Istalgan vaqt");
+  });
+
+  it("searches the day and the time chosen in the sheets", async () => {
+    const api = server();
+    renderPage();
+    await screen.findByText(/So‘nggi e’lonlar/);
+
+    await pick(dateTile, /Ertaga/);
+    expect(dateTile().textContent).toContain("Ertaga, 29-noy");
+    await pick(timeTile, "08:00");
+    expect(timeTile().textContent).toContain("08:00 dan");
+
+    fireEvent.click(screen.getByRole("button", { name: "Qidirish" }));
+    await waitFor(() => expect(api.searches()).toHaveLength(1));
+    expect(api.searches()[0]).toMatchObject({ date: "2026-11-29", time: "08:00" });
+  });
+
+  it("doesn't offer today's past hours, and drops a time that has passed when the day changes to today", async () => {
+    server();
+    renderPage();
+    await screen.findByText(/So‘nggi e’lonlar/);
+
+    await pick(dateTile, /Ertaga/);
+    await pick(timeTile, "08:00");
+    await pick(dateTile, /Bugun/);
+    expect(timeTile().textContent).toContain("Istalgan vaqt"); // 08:00 today has passed
+
+    fireEvent.click(timeTile());
+    expect((await screen.findByRole("button", { name: "09:00" })).disabled).toBe(true);
+    expect(screen.getByRole("button", { name: "10:00" }).disabled).toBe(false);
+  });
+
+  it("shows a later day with its short weekday, so it fits the tile", async () => {
+    server();
+    renderPage();
+    await screen.findByText(/So‘nggi e’lonlar/);
+    fireEvent.click(dateTile());
+    fireEvent.click(await screen.findByRole("button", { name: "Keyingi oy" }));
+    fireEvent.click(screen.getByRole("button", { name: "2-dekabr, chorshanba" }));
+    finishAnimation();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(dateTile().textContent).toContain("Ch, 2-dek");
+  });
+
+  it("keeps a time that is still ahead when the day changes to today", async () => {
+    server();
+    renderPage();
+    await screen.findByText(/So‘nggi e’lonlar/);
+    await pick(dateTile, /Ertaga/);
+    await pick(timeTile, "18:00");
+    await pick(dateTile, /Bugun/);
+    expect(timeTile().textContent).toContain("18:00 dan");
   });
 });

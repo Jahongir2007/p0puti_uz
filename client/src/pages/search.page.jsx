@@ -4,6 +4,7 @@ import {
   ArrowUpDown,
   Calendar as CalendarIcon,
   CarFront,
+  Clock,
   Filter,
   Minus,
   Plus,
@@ -18,6 +19,9 @@ import { formatDeparture } from "../utils/helpers";
 import { useSearchAds } from "../queries/searchAds.query";
 import { CityInput } from "../components/cityInput.component";
 import { localizedName } from "../utils/locations";
+import { addDays, mondayIndex, tashkentHour, tashkentToday, ymdToIso } from "../utils/calendar";
+import { DatePickerSheet } from "../components/datePicker.component";
+import { TimePickerSheet } from "../components/timePicker.component";
 import {
   FilterModal,
   DEFAULT_FILTER,
@@ -28,11 +32,6 @@ import {
 // Prefer the ad's own `type`; fall back to "has a car = driver" if it's missing.
 const isDriverAd = (ad) =>
   ad.type ? ad.type === "DRIVER" : Boolean(ad.vehicle);
-
-// Today's date in Tashkent as YYYY-MM-DD, whatever the device's time zone is
-function tashkentToday() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent" }).format(new Date());
-}
 
 function RideCard({ ad, onClick }) {
   const { t, i18n } = useTranslation("search");
@@ -146,13 +145,40 @@ function RideCardSkeleton() {
 }
 
 function SearchPage({ onNavigate }) {
-  const { t } = useTranslation("search");
+  const { t, i18n } = useTranslation("search");
   const today = tashkentToday();
 
   const [from, setFrom] = useState("Zarafshon");
   const [to, setTo] = useState("Toshkent");
   const [selectedDate, setSelectedDate] = useState(today);
+  const [selectedTime, setSelectedTime] = useState(null); // "HH:00", or null = any time
+  const [openPicker, setOpenPicker] = useState(null); // "date" | "time" while a sheet is open
   const [passengers, setPassengers] = useState(1);
+
+  // Earlier hours of today can't be chosen
+  const minHour = selectedDate === today ? tashkentHour() : 0;
+
+  const handleSelectDate = (date) => {
+    setSelectedDate(date);
+    // 14:00 picked for tomorrow, then the date changed to today at 16:00: that time has passed
+    const hourAfterChange = date === today ? tashkentHour() : 0;
+    if (selectedTime && Number(selectedTime.slice(0, 2)) < hourAfterChange) setSelectedTime(null);
+    setOpenPicker(null);
+  };
+
+  const handleSelectTime = (time) => {
+    setSelectedTime(time);
+    setOpenPicker(null);
+  };
+
+  // "Bugun, 28-noy", "Ertaga, 29-noy", then "Ch, 2-dek": short, so it fits the half-width tile
+  const dateText = (() => {
+    const { day, date } = formatDeparture(ymdToIso(selectedDate), i18n.language);
+    const nearDay = selectedDate === today || selectedDate === addDays(today, 1);
+    const weekday = t("common:picker.weekdaysShort", { returnObjects: true })[mondayIndex(selectedDate)];
+    return `${nearDay ? day : weekday}, ${date}`;
+  })();
+  const timeText = selectedTime ? t("form.fromTime", { time: selectedTime }) : t("form.anyTime");
 
   const [searchParams, setSearchParams] = useState(null); // null = no search yet
 
@@ -200,7 +226,7 @@ function SearchPage({ onNavigate }) {
     const fromCity = from.trim();
     const toCity = to.trim();
     if (!fromCity || !toCity) return;
-    setSearchParams({ from: fromCity, to: toCity, date: selectedDate, passengers });
+    setSearchParams({ from: fromCity, to: toCity, date: selectedDate, time: selectedTime ?? undefined, passengers });
   };
 
   const clearSearch = () => setSearchParams(null);
@@ -275,22 +301,37 @@ function SearchPage({ onNavigate }) {
               />
             </div>
 
-            {/* Date and passengers */}
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <div className="relative flex items-center gap-2.5 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                <CalendarIcon className="h-4 w-4 shrink-0 text-slate-500" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-medium text-slate-400">{t("form.date")}</p>
-                  <input
-                    type="date"
-                    min={today}
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full cursor-pointer bg-transparent text-xs font-semibold text-slate-900 outline-none"
-                  />
-                </div>
-              </div>
+            {/* Date and time: each opens its own sheet */}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setOpenPicker("date")}
+                aria-haspopup="dialog"
+                className="flex min-w-0 items-center gap-2 rounded-2xl bg-slate-50 px-2.5 py-3 text-left ring-1 ring-slate-100 transition active:scale-[0.98]"
+              >
+                <CalendarIcon className="h-4 w-4 shrink-0 text-sky-500" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-medium text-slate-400">{t("form.date")}</span>
+                  <span className="block truncate text-xs font-semibold text-slate-900">{dateText}</span>
+                </span>
+              </button>
 
+              <button
+                type="button"
+                onClick={() => setOpenPicker("time")}
+                aria-haspopup="dialog"
+                className="flex min-w-0 items-center gap-2 rounded-2xl bg-slate-50 px-2.5 py-3 text-left ring-1 ring-slate-100 transition active:scale-[0.98]"
+              >
+                <Clock className="h-4 w-4 shrink-0 text-violet-500" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-medium text-slate-400">{t("form.time")}</span>
+                  <span className="block truncate text-xs font-semibold text-slate-900">{timeText}</span>
+                </span>
+              </button>
+            </div>
+
+            {/* Passengers */}
+            <div className="mt-2">
               <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-2.5 ring-1 ring-slate-100">
                 <div className="flex items-center gap-2 pl-1">
                   <Users className="h-4 w-4 shrink-0 text-slate-500" />
@@ -407,6 +448,23 @@ function SearchPage({ onNavigate }) {
           </div>
         </section>
       </div>
+
+      {openPicker === "date" && (
+        <DatePickerSheet
+          value={selectedDate}
+          min={today}
+          onSelect={handleSelectDate}
+          onClose={() => setOpenPicker(null)}
+        />
+      )}
+      {openPicker === "time" && (
+        <TimePickerSheet
+          value={selectedTime}
+          minHour={minHour}
+          onSelect={handleSelectTime}
+          onClose={() => setOpenPicker(null)}
+        />
+      )}
 
       {/* Mounted only while open, so the draft is reset from `filter` each time */}
       {isFilterOpen && (
